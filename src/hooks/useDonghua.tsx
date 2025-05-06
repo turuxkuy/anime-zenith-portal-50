@@ -66,7 +66,8 @@ export function useDonghua() {
     }
   };
 
-  const getDonghuaById = async (id: number | string): Promise<Donghua | null> => {
+  // Fixed the TypeScript error by ensuring id is always treated as a number
+  const getDonghuaById = async (id: number): Promise<Donghua | null> => {
     try {
       const { data, error } = await supabase
         .from('donghua')
