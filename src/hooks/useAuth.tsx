@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,10 +5,11 @@ import { toast } from '@/hooks/use-toast';
 
 type AuthContextType = {
   session: Session | null;
-  user: User | null;
+  user: (User & { username?: string; role?: string }) | null;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
+  updateProfile: (data: { username: string }) => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
   isVip: boolean;
@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<(User & { username?: string; role?: string }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('user');
 
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, username')
         .eq('id', userId)
         .single();
       
@@ -70,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching user profile:', error);
       } else if (data) {
         setUserRole(data.role);
+        // Extend the user object with profile data
+        setUser(prev => prev ? { ...prev, role: data.role, username: data.username } : null);
       }
       
       setLoading(false);
@@ -156,6 +158,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Add the updateProfile function
+  const updateProfile = async (data: { username: string }) => {
+    if (!user) throw new Error("No user logged in");
+    
+    try {
+      // First update the profile in the database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: data.username })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      // Update the user metadata in auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { username: data.username }
+      });
+      
+      if (updateError) throw updateError;
+      
+      // Update the local user state
+      setUser(prev => prev ? { ...prev, username: data.username } : null);
+      
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
+
   const isAdmin = userRole === 'admin';
   const isVip = userRole === 'vip' || userRole === 'admin';
 
@@ -165,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     signOut,
+    updateProfile,
     loading,
     isAdmin,
     isVip,
