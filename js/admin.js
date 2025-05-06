@@ -45,6 +45,14 @@ function initAdminPanel() {
       
       if (page) {
         showAdminPage(page);
+        
+        // Close sidebar on mobile after clicking a menu item
+        const adminSidebar = document.getElementById('adminSidebar');
+        const overlay = document.getElementById('overlay');
+        if (window.innerWidth <= 768 && adminSidebar && overlay) {
+          adminSidebar.classList.remove('active');
+          overlay.style.display = 'none';
+        }
       }
     });
   });
@@ -148,6 +156,21 @@ function loadDonghuaTable() {
   // Clear table
   tableBody.innerHTML = '';
   
+  if (donghuaData.length === 0) {
+    // Show empty state
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center">
+          <div class="empty-state">
+            <i class="fas fa-film fa-3x"></i>
+            <p>Belum ada donghua. Klik tombol "Tambah Donghua" untuk menambahkan.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
   // Add row for each donghua
   donghuaData.forEach((donghua, index) => {
     const row = document.createElement('tr');
@@ -190,6 +213,21 @@ function loadEpisodeTable() {
   
   // Clear table
   tableBody.innerHTML = '';
+  
+  if (episodesData.length === 0) {
+    // Show empty state
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center">
+          <div class="empty-state">
+            <i class="fas fa-video fa-3x"></i>
+            <p>Belum ada episode. Klik tombol "Tambah Episode" untuk menambahkan.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
   
   // Add row for each episode
   episodesData.forEach((episode, index) => {
@@ -235,6 +273,21 @@ function loadUsersTable() {
   
   // Clear table
   tableBody.innerHTML = '';
+  
+  if (users.length === 0) {
+    // Show empty state
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center">
+          <div class="empty-state">
+            <i class="fas fa-users fa-3x"></i>
+            <p>Belum ada pengguna terdaftar.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
   
   // Add row for each user
   users.forEach((user, index) => {
@@ -320,160 +373,6 @@ function openDonghuaModal(donghuaId = null) {
   modal.style.display = 'flex';
 }
 
-// Function to setup donghua form
-function setupDonghuaForm() {
-  const form = document.getElementById('donghuaForm');
-  const posterUpload = document.getElementById('posterUpload');
-  const backdropUpload = document.getElementById('backdropUpload');
-  
-  if (!form || !posterUpload || !backdropUpload) return;
-  
-  // Preview poster image when selected
-  posterUpload.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const posterPreview = document.getElementById('posterPreview');
-    
-    if (file && file.type.match('image.*')) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        posterPreview.innerHTML = `<img src="${e.target.result}" alt="Poster Preview">`;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-  
-  // Preview backdrop image when selected
-  backdropUpload.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const backdropPreview = document.getElementById('backdropPreview');
-    
-    if (file && file.type.match('image.*')) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        backdropPreview.innerHTML = `<img src="${e.target.result}" alt="Backdrop Preview">`;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-  
-  // Handle form submission
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const title = document.getElementById('title').value;
-    const year = parseInt(document.getElementById('year').value);
-    const genre = document.getElementById('genre').value;
-    const status = document.getElementById('status').value;
-    const rating = parseFloat(document.getElementById('rating').value);
-    const synopsis = document.getElementById('synopsis').value;
-    
-    // Get donghua data
-    const donghuaData = JSON.parse(localStorage.getItem('donghuaData')) || [];
-    
-    // Check if editing existing donghua
-    const editId = form.getAttribute('data-id');
-    
-    // Create donghua object
-    let donghua = {
-      title,
-      year,
-      genre,
-      status,
-      rating,
-      synopsis,
-      poster: '',
-      backdrop: ''
-    };
-    
-    // Handle poster image
-    const posterFile = posterUpload.files[0];
-    if (posterFile) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        donghua.poster = e.target.result;
-        handleBackdropImage();
-      };
-      reader.readAsDataURL(posterFile);
-    } else if (editId !== null) {
-      // Keep existing poster if editing
-      donghua.poster = donghuaData[editId].poster || '';
-      handleBackdropImage();
-    } else {
-      // No poster selected for new donghua
-      handleBackdropImage();
-    }
-    
-    function handleBackdropImage() {
-      // Handle backdrop image
-      const backdropFile = backdropUpload.files[0];
-      if (backdropFile) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          donghua.backdrop = e.target.result;
-          saveDonghua();
-        };
-        reader.readAsDataURL(backdropFile);
-      } else if (editId !== null) {
-        // Keep existing backdrop if editing
-        donghua.backdrop = donghuaData[editId].backdrop || '';
-        saveDonghua();
-      } else {
-        // No backdrop selected for new donghua
-        saveDonghua();
-      }
-    }
-    
-    function saveDonghua() {
-      if (editId !== null) {
-        // Update existing donghua
-        donghuaData[editId] = donghua;
-      } else {
-        // Add new donghua
-        donghuaData.push(donghua);
-      }
-      
-      // Save to localStorage
-      localStorage.setItem('donghuaData', JSON.stringify(donghuaData));
-      
-      // Close modal
-      document.getElementById('donghuaModal').style.display = 'none';
-      
-      // Reload table
-      loadDonghuaTable();
-      loadDashboardStats();
-    }
-  });
-}
-
-// Function to edit donghua
-function editDonghua(id) {
-  openDonghuaModal(id);
-}
-
-// Function to delete donghua
-function deleteDonghua(id) {
-  if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
-    // Get donghua data
-    const donghuaData = JSON.parse(localStorage.getItem('donghuaData')) || [];
-    
-    if (id >= 0 && id < donghuaData.length) {
-      // Remove donghua
-      donghuaData.splice(id, 1);
-      localStorage.setItem('donghuaData', JSON.stringify(donghuaData));
-      
-      // Also delete related episodes
-      const episodesData = JSON.parse(localStorage.getItem('episodesData')) || [];
-      const filteredEpisodes = episodesData.filter(episode => episode.donghuaId != id);
-      localStorage.setItem('episodesData', JSON.stringify(filteredEpisodes));
-      
-      // Reload tables
-      loadDonghuaTable();
-      loadEpisodeTable();
-      loadDashboardStats();
-    }
-  }
-}
-
 // Function to open episode modal
 function openEpisodeModal(episodeId = null) {
   const modal = document.getElementById('episodeModal');
@@ -533,7 +432,275 @@ function openEpisodeModal(episodeId = null) {
   modal.style.display = 'flex';
 }
 
-// Function to setup episode form
+// Function to setup user form
+function setupUserForm() {
+  const form = document.getElementById('userForm');
+  
+  if (!form) return;
+  
+  // Handle form submission
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const role = document.getElementById('userRole').value;
+    
+    // Get users data
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    
+    // Find the user
+    const userIndex = users.findIndex(u => u.username === username);
+    
+    if (userIndex !== -1) {
+      const oldRole = users[userIndex].role;
+      // Update user role
+      users[userIndex].role = role;
+      
+      // Save to localStorage
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      // Close modal
+      document.getElementById('userModal').style.display = 'none';
+      
+      // Reload table
+      loadUsersTable();
+      loadDashboardStats();
+      
+      // Show toast notification
+      showToast(`Status pengguna ${username} berhasil diperbarui dari ${oldRole} menjadi ${role}!`, 'success');
+    }
+  });
+}
+
+// Function to edit donghua
+function editDonghua(id) {
+  openDonghuaModal(id);
+}
+
+// Function to delete donghua
+function deleteDonghua(id) {
+  if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
+    // Get donghua data
+    const donghuaData = JSON.parse(localStorage.getItem('donghuaData')) || [];
+    
+    if (id >= 0 && id < donghuaData.length) {
+      // Remove donghua
+      donghuaData.splice(id, 1);
+      localStorage.setItem('donghuaData', JSON.stringify(donghuaData));
+      
+      // Also delete related episodes
+      const episodesData = JSON.parse(localStorage.getItem('episodesData')) || [];
+      const filteredEpisodes = episodesData.filter(episode => episode.donghuaId != id);
+      localStorage.setItem('episodesData', JSON.stringify(filteredEpisodes));
+      
+      // Reload tables
+      loadDonghuaTable();
+      loadEpisodeTable();
+      loadDashboardStats();
+    }
+  }
+}
+
+// Function to edit episode
+function editEpisode(id) {
+  openEpisodeModal(id);
+}
+
+// Function to delete episode
+function deleteEpisode(id) {
+  if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
+    // Get episodes data
+    const episodesData = JSON.parse(localStorage.getItem('episodesData')) || [];
+    
+    // Find the episode
+    const index = episodesData.findIndex(ep => ep.id === id);
+    
+    if (index !== -1) {
+      // Remove episode
+      episodesData.splice(index, 1);
+      localStorage.setItem('episodesData', JSON.stringify(episodesData));
+      
+      // Reload tables
+      loadEpisodeTable();
+      loadDashboardStats();
+    }
+  }
+}
+
+// Function to edit user
+function editUser(username) {
+  const modal = document.getElementById('userModal');
+  const form = document.getElementById('userForm');
+  
+  if (!modal || !form) return;
+  
+  // Get users data
+  const users = JSON.parse(localStorage.getItem('users')) || [];
+  const user = users.find(u => u.username === username);
+  
+  if (user) {
+    // Fill form fields
+    document.getElementById('username').value = user.username;
+    document.getElementById('email').value = user.email;
+    document.getElementById('userRole').value = user.role;
+    
+    // Show the modal
+    modal.style.display = 'flex';
+  }
+}
+
+// Function to handle file uploads
+async function handleFileUpload(file, bucket, path) {
+  // In the future, this will use Supabase storage
+  // For now, we'll use localStorage as before
+  if (file) {
+    // Check if supabaseStorage (from supabase-config.js) is defined
+    if (typeof supabaseStorage !== 'undefined' && supabaseStorage.uploadFile) {
+      try {
+        // This simulates using Supabase storage
+        const { data, error } = await supabaseStorage.uploadFile(bucket, path, file);
+        
+        if (error) {
+          console.error('Error uploading file:', error);
+          showToast('Error uploading file', 'error');
+          return null;
+        }
+        
+        return data.publicUrl;
+      } catch (error) {
+        console.error('Exception uploading file:', error);
+        showToast('Error uploading file', 'error');
+        return null;
+      }
+    } else {
+      // Fallback to the old method
+      const reader = new FileReader();
+      return new Promise((resolve) => {
+        reader.onload = function(e) {
+          resolve(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+  return null;
+}
+
+// Update the setupDonghuaForm function to use handleFileUpload
+function setupDonghuaForm() {
+  const form = document.getElementById('donghuaForm');
+  const posterUpload = document.getElementById('posterUpload');
+  const backdropUpload = document.getElementById('backdropUpload');
+  
+  if (!form || !posterUpload || !backdropUpload) return;
+  
+  // Preview poster image when selected
+  posterUpload.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const posterPreview = document.getElementById('posterPreview');
+    
+    if (file && file.type.match('image.*')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        posterPreview.innerHTML = `<img src="${e.target.result}" alt="Poster Preview">`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+  
+  // Preview backdrop image when selected
+  backdropUpload.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const backdropPreview = document.getElementById('backdropPreview');
+    
+    if (file && file.type.match('image.*')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        backdropPreview.innerHTML = `<img src="${e.target.result}" alt="Backdrop Preview">`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+  
+  // Handle form submission
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const title = document.getElementById('title').value;
+    const year = parseInt(document.getElementById('year').value);
+    const genre = document.getElementById('genre').value;
+    const status = document.getElementById('status').value;
+    const rating = parseFloat(document.getElementById('rating').value);
+    const synopsis = document.getElementById('synopsis').value;
+    
+    // Get donghua data
+    const donghuaData = JSON.parse(localStorage.getItem('donghuaData')) || [];
+    
+    // Check if editing existing donghua
+    const editId = form.getAttribute('data-id');
+    
+    // Create donghua object
+    let donghua = {
+      title,
+      year,
+      genre,
+      status,
+      rating,
+      synopsis,
+      poster: '',
+      backdrop: ''
+    };
+    
+    try {
+      // Handle poster image
+      const posterFile = posterUpload.files[0];
+      if (posterFile) {
+        const posterPath = `donghua/${Date.now()}_poster_${posterFile.name}`;
+        donghua.poster = await handleFileUpload(posterFile, 'media', posterPath);
+      } else if (editId !== null) {
+        // Keep existing poster if editing
+        donghua.poster = donghuaData[editId].poster || '';
+      }
+      
+      // Handle backdrop image
+      const backdropFile = backdropUpload.files[0];
+      if (backdropFile) {
+        const backdropPath = `donghua/${Date.now()}_backdrop_${backdropFile.name}`;
+        donghua.backdrop = await handleFileUpload(backdropFile, 'media', backdropPath);
+      } else if (editId !== null) {
+        // Keep existing backdrop if editing
+        donghua.backdrop = donghuaData[editId].backdrop || '';
+      }
+      
+      // Save donghua
+      if (editId !== null) {
+        // Update existing donghua
+        donghuaData[editId] = donghua;
+        showToast('Donghua berhasil diperbarui!', 'success');
+      } else {
+        // Add new donghua
+        donghuaData.push(donghua);
+        showToast('Donghua baru berhasil ditambahkan!', 'success');
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('donghuaData', JSON.stringify(donghuaData));
+      
+      // Close modal
+      document.getElementById('donghuaModal').style.display = 'none';
+      
+      // Reload table
+      loadDonghuaTable();
+      loadDashboardStats();
+      
+    } catch (error) {
+      console.error('Error saving donghua:', error);
+      showToast('Terjadi kesalahan saat menyimpan data', 'error');
+    }
+  });
+}
+
+// Update the setupEpisodeForm function to use handleFileUpload
 function setupEpisodeForm() {
   const form = document.getElementById('episodeForm');
   const thumbnailUpload = document.getElementById('thumbnailUpload');
@@ -573,7 +740,7 @@ function setupEpisodeForm() {
   });
   
   // Handle form submission
-  form.addEventListener('submit', function(e) {
+  form.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const donghuaId = document.getElementById('donghuaSelect').value;
@@ -603,36 +770,57 @@ function setupEpisodeForm() {
       releaseDate: new Date().toISOString().split('T')[0]
     };
     
-    // Handle thumbnail image
-    const thumbnailFile = thumbnailUpload.files[0];
-    if (thumbnailFile) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        episode.thumbnail = e.target.result;
-        saveEpisode();
-      };
-      reader.readAsDataURL(thumbnailFile);
-    } else if (editId) {
-      // Keep existing thumbnail if editing
-      const existingEpisode = episodesData.find(ep => ep.id === editId);
-      if (existingEpisode) {
-        episode.thumbnail = existingEpisode.thumbnail || '';
+    try {
+      // Handle thumbnail image
+      const thumbnailFile = thumbnailUpload.files[0];
+      if (thumbnailFile) {
+        const thumbnailPath = `episodes/${donghuaId}-${episodeNumber}_thumb_${Date.now()}`;
+        episode.thumbnail = await handleFileUpload(thumbnailFile, 'media', thumbnailPath);
+      } else if (editId) {
+        // Keep existing thumbnail if editing
+        const existingEpisode = episodesData.find(ep => ep.id === editId);
+        if (existingEpisode) {
+          episode.thumbnail = existingEpisode.thumbnail || '';
+        }
       }
-      saveEpisode();
-    } else {
-      saveEpisode();
-    }
-    
-    function saveEpisode() {
+      
+      // Handle video file
+      const videoFile = videoUpload.files[0];
+      if (videoFile) {
+        // Show upload progress
+        uploadProgress.style.display = 'block';
+        uploadProgress.value = 0;
+        
+        // Simulate upload progress (in a real app, this would track actual upload)
+        const interval = setInterval(() => {
+          uploadProgress.value += 10;
+          if (uploadProgress.value >= 100) {
+            clearInterval(interval);
+          }
+        }, 300);
+        
+        // In a real app with Supabase, we would upload the video and get the URL
+        // For now, just simulate a video URL
+        episode.videoUrl = '#';
+        
+        // In the future with Supabase integration:
+        // const videoPath = `videos/${donghuaId}-${episodeNumber}_${Date.now()}`;
+        // const { data, error } = await supabase.storage.from('media').upload(videoPath, videoFile);
+        // if (data) episode.videoUrl = supabase.storage.from('media').getPublicUrl(videoPath).data.publicUrl;
+      }
+      
+      // Save episode
       if (editId) {
         // Update existing episode
         const index = episodesData.findIndex(ep => ep.id === editId);
         if (index !== -1) {
           episodesData[index] = episode;
         }
+        showToast('Episode berhasil diperbarui!', 'success');
       } else {
         // Add new episode
         episodesData.push(episode);
+        showToast('Episode baru berhasil ditambahkan!', 'success');
       }
       
       // Save to localStorage
@@ -644,90 +832,10 @@ function setupEpisodeForm() {
       // Reload table
       loadEpisodeTable();
       loadDashboardStats();
+      
+    } catch (error) {
+      console.error('Error saving episode:', error);
+      showToast('Terjadi kesalahan saat menyimpan data', 'error');
     }
   });
-}
-
-// Function to edit episode
-function editEpisode(id) {
-  openEpisodeModal(id);
-}
-
-// Function to delete episode
-function deleteEpisode(id) {
-  if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
-    // Get episodes data
-    const episodesData = JSON.parse(localStorage.getItem('episodesData')) || [];
-    
-    // Find the episode
-    const index = episodesData.findIndex(ep => ep.id === id);
-    
-    if (index !== -1) {
-      // Remove episode
-      episodesData.splice(index, 1);
-      localStorage.setItem('episodesData', JSON.stringify(episodesData));
-      
-      // Reload tables
-      loadEpisodeTable();
-      loadDashboardStats();
-    }
-  }
-}
-
-// Function to setup user form
-function setupUserForm() {
-  const form = document.getElementById('userForm');
-  
-  if (!form) return;
-  
-  // Handle form submission
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const role = document.getElementById('userRole').value;
-    
-    // Get users data
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    
-    // Find the user
-    const userIndex = users.findIndex(u => u.username === username);
-    
-    if (userIndex !== -1) {
-      // Update user role
-      users[userIndex].role = role;
-      
-      // Save to localStorage
-      localStorage.setItem('users', JSON.stringify(users));
-      
-      // Close modal
-      document.getElementById('userModal').style.display = 'none';
-      
-      // Reload table
-      loadUsersTable();
-      loadDashboardStats();
-    }
-  });
-}
-
-// Function to edit user
-function editUser(username) {
-  const modal = document.getElementById('userModal');
-  const form = document.getElementById('userForm');
-  
-  if (!modal || !form) return;
-  
-  // Get users data
-  const users = JSON.parse(localStorage.getItem('users')) || [];
-  const user = users.find(u => u.username === username);
-  
-  if (user) {
-    // Fill form fields
-    document.getElementById('username').value = user.username;
-    document.getElementById('email').value = user.email;
-    document.getElementById('userRole').value = user.role;
-    
-    // Show the modal
-    modal.style.display = 'flex';
-  }
 }

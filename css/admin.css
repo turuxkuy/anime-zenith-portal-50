@@ -13,13 +13,17 @@
   padding: 2rem 0;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s;
+  transition: all 0.3s;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
 }
 
 .admin-logo {
   padding: 0 1.5rem;
   margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .admin-logo h2 {
@@ -28,6 +32,19 @@
 
 .admin-logo span {
   color: var(--primary);
+}
+
+.sidebar-close-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--gray);
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.sidebar-close-btn:hover {
+  color: var(--light);
 }
 
 .admin-menu {
@@ -75,8 +92,27 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.admin-header-title {
+  display: flex;
+  align-items: center;
+}
+
 .admin-header-title h1 {
   font-size: 1.8rem;
+  color: var(--light);
+}
+
+.menu-toggle-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--gray);
+  margin-right: 1rem;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.menu-toggle-btn:hover {
   color: var(--light);
 }
 
@@ -158,10 +194,12 @@
 .action-bar {
   display: flex;
   justify-content: flex-end;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
-.add-button {
+.add-button, .sync-button {
   background-color: var(--primary);
   color: white;
   border: none;
@@ -171,25 +209,36 @@
   display: flex;
   align-items: center;
   transition: background-color 0.3s;
+  cursor: pointer;
 }
 
-.add-button i {
+.add-button i, .sync-button i {
   margin-right: 0.5rem;
 }
 
-.add-button:hover {
+.add-button:hover, .sync-button:hover {
   background-color: var(--primary-dark);
+}
+
+.sync-button {
+  background-color: var(--secondary);
+}
+
+.sync-button:hover {
+  background-color: var(--secondary-dark);
 }
 
 .admin-table-container {
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius);
   overflow: auto;
+  max-width: 100%;
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 800px;
 }
 
 .admin-table th {
@@ -199,6 +248,7 @@
   font-weight: 500;
   color: var(--light);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
 }
 
 .admin-table td {
@@ -252,6 +302,7 @@
   justify-content: center;
   font-size: 0.9rem;
   transition: background-color 0.3s;
+  cursor: pointer;
 }
 
 .edit-btn {
@@ -342,35 +393,100 @@ progress::-webkit-progress-value {
   border-radius: var(--radius);
 }
 
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.toast {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-top: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  min-width: 250px;
+  max-width: 350px;
+  transform: translateX(400px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast.success {
+  border-left-color: var(--success);
+}
+
+.toast.error {
+  border-left-color: var(--error);
+}
+
+.toast.warning {
+  border-left-color: var(--warning);
+}
+
+.toast i {
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+/* Overlay */
+.admin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 900;
+  display: none;
+}
+
 /* Responsive Admin Panel */
 @media (max-width: 768px) {
   .admin-sidebar {
     position: fixed;
-    transform: translateX(-100%);
-    z-index: 100;
+    left: -250px;
+    top: 0;
+    bottom: 0;
+    transition: left 0.3s ease;
   }
   
   .admin-sidebar.active {
-    transform: translateX(0);
+    left: 0;
+  }
+  
+  .sidebar-close-btn {
+    display: block;
+  }
+  
+  .menu-toggle-btn {
+    display: block;
+  }
+  
+  .admin-header-title h1 {
+    font-size: 1.5rem;
   }
   
   .stats-container {
     grid-template-columns: 1fr;
   }
   
-  .admin-header-title h1 {
-    font-size: 1.5rem;
+  .admin-page {
+    padding: 1rem;
   }
-}
-
-@media (min-width: 768px) {
-  .stats-container {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .stats-container {
-    grid-template-columns: repeat(4, 1fr);
+  
+  .action-bar {
+    justify-content: center;
   }
 }

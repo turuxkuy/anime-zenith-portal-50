@@ -11,9 +11,12 @@
 </head>
 <body>
   <div class="admin-container">
-    <aside class="admin-sidebar">
+    <aside class="admin-sidebar" id="adminSidebar">
       <div class="admin-logo">
         <h2>Zenith<span>Admin</span></h2>
+        <button id="closeSidebar" class="sidebar-close-btn">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
       <ul class="admin-menu">
         <li class="admin-menu-item active" data-page="dashboard">
@@ -42,6 +45,9 @@
     <main class="admin-content">
       <header class="admin-header">
         <div class="admin-header-title">
+          <button id="menuToggle" class="menu-toggle-btn">
+            <i class="fas fa-bars"></i>
+          </button>
           <h1 id="pageTitle">Dashboard</h1>
         </div>
         <div class="admin-user-info">
@@ -96,6 +102,7 @@
       <div class="admin-page" id="donghua">
         <div class="action-bar">
           <button class="add-button" id="addDonghuaBtn"><i class="fas fa-plus"></i> Tambah Donghua</button>
+          <button class="sync-button" id="syncDonghuaBtn"><i class="fas fa-sync-alt"></i> Sinkronisasi</button>
         </div>
         <div class="admin-table-container">
           <table class="admin-table">
@@ -167,6 +174,7 @@
       <div class="admin-page" id="episode">
         <div class="action-bar">
           <button class="add-button" id="addEpisodeBtn"><i class="fas fa-plus"></i> Tambah Episode</button>
+          <button class="sync-button" id="syncEpisodeBtn"><i class="fas fa-sync-alt"></i> Sinkronisasi</button>
         </div>
         <div class="admin-table-container">
           <table class="admin-table">
@@ -237,6 +245,9 @@
       </div>
 
       <div class="admin-page" id="users">
+        <div class="action-bar">
+          <button class="sync-button" id="syncUsersBtn"><i class="fas fa-sync-alt"></i> Sinkronisasi</button>
+        </div>
         <div class="admin-table-container">
           <table class="admin-table">
             <thead>
@@ -283,7 +294,11 @@
     </main>
   </div>
 
+  <div id="overlay" class="admin-overlay"></div>
+  <div id="toastContainer" class="toast-container"></div>
+
   <script src="js/admin.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/supabase-config.js"></script>
 </body>
 </html>
