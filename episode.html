@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tonton Episode - Zenith Donghua</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">
+        <a href="index.html">Zenith<span>Donghua</span></a>
+      </div>
+      <div class="menu-toggle">
+        <i class="fas fa-bars"></i>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="index.html">Beranda</a></li>
+        <li><a href="user.html">Akun</a></li>
+        <li><a href="login.html" id="loginBtn">Masuk</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="video-player-section">
+      <h1 id="episodeTitle">Memuat...</h1>
+      <div class="video-container">
+        <div class="video-player" id="videoPlayer">
+          <video id="videoElement" controls>
+            <source src="" type="video/mp4" id="videoSource">
+            Browser Anda tidak mendukung tag video.
+          </video>
+          <div class="vip-overlay" id="vipOverlay">
+            <div class="vip-message">
+              <i class="fas fa-crown"></i>
+              <h2>Konten VIP</h2>
+              <p>Episode ini hanya tersedia untuk pengguna VIP</p>
+              <a href="user.html" class="vip-button">Dapatkan VIP</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="episode-navigation">
+        <button id="prevEpisode" class="nav-button"><i class="fas fa-step-backward"></i> Episode Sebelumnya</button>
+        <a id="backToDonghua" class="back-button"><i class="fas fa-list"></i> Daftar Episode</a>
+        <button id="nextEpisode" class="nav-button">Episode Berikutnya <i class="fas fa-step-forward"></i></button>
+      </div>
+
+      <div class="episode-info">
+        <h2 id="episodeSubtitle">Memuat...</h2>
+        <div class="episode-meta">
+          <span id="episodeNumber">Episode #</span>
+          <span id="episodeDate">Tanggal</span>
+          <span id="episodeDuration">Durasi</span>
+        </div>
+        <p id="episodeDescription">Memuat deskripsi episode...</p>
+      </div>
+
+      <div class="more-episodes">
+        <h3>Episode Lainnya</h3>
+        <div class="episode-grid" id="moreEpisodesList">
+          <!-- More episodes will be loaded here via JavaScript -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-logo">
+        <h2>Zenith<span>Donghua</span></h2>
+        <p>Platform streaming donghua terbaik</p>
+      </div>
+      <div class="footer-links">
+        <h3>Tautan</h3>
+        <ul>
+          <li><a href="index.html">Beranda</a></li>
+          <li><a href="user.html">Akun</a></li>
+          <li><a href="#">Bantuan</a></li>
+        </ul>
+      </div>
+      <div class="footer-social">
+        <h3>Ikuti Kami</h3>
+        <div class="social-icons">
+          <a href="#"><i class="fab fa-facebook"></i></a>
+          <a href="#"><i class="fab fa-twitter"></i></a>
+          <a href="#"><i class="fab fa-instagram"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2025 ZenithDonghua. Hak Cipta Dilindungi.</p>
+    </div>
+  </footer>
+
+  <script src="js/episode.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

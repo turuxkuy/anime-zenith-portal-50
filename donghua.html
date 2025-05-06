@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zenith Donghua - Streaming Donghua Terbaik</title>
+  <title>Detail Donghua - Zenith Donghua</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -18,7 +18,7 @@
         <i class="fas fa-bars"></i>
       </div>
       <ul class="nav-menu">
-        <li><a href="index.html" class="active">Beranda</a></li>
+        <li><a href="index.html">Beranda</a></li>
         <li><a href="user.html">Akun</a></li>
         <li><a href="login.html" id="loginBtn">Masuk</a></li>
       </ul>
@@ -26,17 +26,37 @@
   </header>
 
   <main>
-    <section class="hero">
-      <div class="hero-content">
-        <h1>Streaming Donghua Terbaik</h1>
-        <p>Nikmati ribuan episode donghua dengan kualitas terbaik</p>
+    <section class="donghua-detail">
+      <div class="donghua-backdrop" id="donghuaBackdrop">
+        <!-- Background image will be loaded via JS -->
       </div>
-    </section>
+      <div class="donghua-info">
+        <div class="donghua-poster" id="donghuaPoster">
+          <!-- Poster image will be loaded via JS -->
+        </div>
+        <div class="donghua-content">
+          <h1 id="donghuaTitle">Memuat...</h1>
+          <div class="donghua-meta">
+            <span id="donghuaYear">Tahun</span>
+            <span id="donghuaGenre">Genre</span>
+            <span id="donghuaStatus">Status</span>
+          </div>
+          <div class="donghua-rating">
+            <i class="fas fa-star"></i>
+            <span id="donghuaRating">0.0</span>
+          </div>
+          <div class="donghua-synopsis">
+            <h3>Sinopsis</h3>
+            <p id="donghuaSynopsis">Memuat sinopsis...</p>
+          </div>
+        </div>
+      </div>
 
-    <section class="donghua-list">
-      <h2>Donghua Terbaru</h2>
-      <div class="donghua-grid" id="donghuaGrid">
-        <!-- Donghua posters will be loaded here via JavaScript -->
+      <div class="episode-section">
+        <h2>Daftar Episode</h2>
+        <div class="episode-list" id="episodeList">
+          <!-- Episodes will be loaded here via JavaScript -->
+        </div>
       </div>
     </section>
   </main>
@@ -69,7 +89,7 @@
     </div>
   </footer>
 
-  <script src="js/main.js"></script>
+  <script src="js/donghua.js"></script>
   <script src="js/auth.js"></script>
 </body>
 </html>

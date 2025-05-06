@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil Pengguna - Zenith Donghua</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">
+        <a href="index.html">Zenith<span>Donghua</span></a>
+      </div>
+      <div class="menu-toggle">
+        <i class="fas fa-bars"></i>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="index.html">Beranda</a></li>
+        <li><a href="user.html" class="active">Akun</a></li>
+        <li><a href="login.html" id="loginBtn">Masuk</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="user-profile">
+      <div class="login-prompt" id="loginPrompt">
+        <h2>Masuk untuk mengakses profil Anda</h2>
+        <p>Anda perlu masuk untuk melihat dan mengelola profil Anda.</p>
+        <a href="login.html" class="auth-button">Masuk / Daftar</a>
+      </div>
+
+      <div class="profile-container" id="profileContainer" style="display: none;">
+        <div class="profile-header">
+          <div class="profile-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="profile-info">
+            <h2 id="profileUsername">Username</h2>
+            <span id="userRole" class="user-role">Regular</span>
+          </div>
+        </div>
+
+        <div class="profile-details">
+          <div class="detail-card">
+            <h3>Informasi Akun</h3>
+            <ul>
+              <li>
+                <span class="detail-label">Username</span>
+                <span id="detailUsername">-</span>
+              </li>
+              <li>
+                <span class="detail-label">Email</span>
+                <span id="detailEmail">-</span>
+              </li>
+              <li>
+                <span class="detail-label">Status Akun</span>
+                <span id="detailRole">-</span>
+              </li>
+              <li>
+                <span class="detail-label">Tanggal Bergabung</span>
+                <span id="detailJoined">-</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="vip-card" id="regularUserCard">
+            <div class="vip-banner">
+              <i class="fas fa-crown"></i>
+              <h3>Tingkatkan ke VIP</h3>
+            </div>
+            <div class="vip-features">
+              <p>Nikmati semua donghua tanpa batasan!</p>
+              <ul>
+                <li><i class="fas fa-check"></i> Akses semua episode VIP</li>
+                <li><i class="fas fa-check"></i> Tanpa iklan</li>
+                <li><i class="fas fa-check"></i> Kualitas streaming terbaik</li>
+                <li><i class="fas fa-check"></i> Episode terbaru lebih cepat</li>
+              </ul>
+              <button id="requestVipBtn" class="vip-button">Dapatkan VIP Sekarang!</button>
+              <p class="vip-note">* Admin akan meninjau permintaan Anda dan mengubah status akun.</p>
+            </div>
+          </div>
+
+          <div class="vip-card vip-active" id="vipUserCard" style="display: none;">
+            <div class="vip-banner">
+              <i class="fas fa-crown"></i>
+              <h3>Member VIP</h3>
+            </div>
+            <div class="vip-features">
+              <p>Selamat! Anda adalah member VIP.</p>
+              <ul>
+                <li><i class="fas fa-check"></i> Akses semua episode VIP</li>
+                <li><i class="fas fa-check"></i> Tanpa iklan</li>
+                <li><i class="fas fa-check"></i> Kualitas streaming terbaik</li>
+                <li><i class="fas fa-check"></i> Episode terbaru lebih cepat</li>
+              </ul>
+              <p class="vip-active-text">Nikmati semua fitur VIP!</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <button id="changePasswordBtn" class="profile-button"><i class="fas fa-key"></i> Ubah Password</button>
+          <button id="logoutButton" class="profile-button"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+        </div>
+      </div>
+
+      <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+          <span class="close-modal">&times;</span>
+          <h2>Ubah Password</h2>
+          <form id="changePasswordForm">
+            <div class="form-group">
+              <label for="currentPassword">Password Saat Ini</label>
+              <input type="password" id="currentPassword" name="currentPassword" required>
+            </div>
+            <div class="form-group">
+              <label for="newPassword">Password Baru</label>
+              <input type="password" id="newPassword" name="newPassword" required>
+            </div>
+            <div class="form-group">
+              <label for="confirmNewPassword">Konfirmasi Password Baru</label>
+              <input type="password" id="confirmNewPassword" name="confirmNewPassword" required>
+            </div>
+            <div id="passwordError" class="error-message"></div>
+            <button type="submit" class="submit-button">Simpan Password Baru</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal" id="requestVipModal">
+        <div class="modal-content">
+          <span class="close-modal">&times;</span>
+          <h2>Permintaan VIP</h2>
+          <p>Permintaan VIP Anda telah terkirim! Admin akan segera meninjau permintaan Anda.</p>
+          <p>Setelah permintaan disetujui, Anda akan mendapatkan akses VIP lengkap.</p>
+          <button class="submit-button close-modal-btn">Tutup</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-logo">
+        <h2>Zenith<span>Donghua</span></h2>
+        <p>Platform streaming donghua terbaik</p>
+      </div>
+      <div class="footer-links">
+        <h3>Tautan</h3>
+        <ul>
+          <li><a href="index.html">Beranda</a></li>
+          <li><a href="user.html">Akun</a></li>
+          <li><a href="#">Bantuan</a></li>
+        </ul>
+      </div>
+      <div class="footer-social">
+        <h3>Ikuti Kami</h3>
+        <div class="social-icons">
+          <a href="#"><i class="fab fa-facebook"></i></a>
+          <a href="#"><i class="fab fa-twitter"></i></a>
+          <a href="#"><i class="fab fa-instagram"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2025 ZenithDonghua. Hak Cipta Dilindungi.</p>
+    </div>
+  </footer>
+
+  <script src="js/user.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
