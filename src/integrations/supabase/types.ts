@@ -9,7 +9,125 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      donghua: {
+        Row: {
+          backdrop_url: string | null
+          created_at: string
+          genre: string
+          id: number
+          poster_url: string | null
+          rating: number
+          status: string
+          synopsis: string
+          title: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          backdrop_url?: string | null
+          created_at?: string
+          genre: string
+          id?: number
+          poster_url?: string | null
+          rating: number
+          status: string
+          synopsis: string
+          title: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          backdrop_url?: string | null
+          created_at?: string
+          genre?: string
+          id?: number
+          poster_url?: string | null
+          rating?: number
+          status?: string
+          synopsis?: string
+          title?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      episodes: {
+        Row: {
+          created_at: string
+          description: string | null
+          donghua_id: number
+          duration: number | null
+          episode_number: number
+          id: string
+          is_vip: boolean
+          release_date: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          donghua_id: number
+          duration?: number | null
+          episode_number: number
+          id: string
+          is_vip?: boolean
+          release_date: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          donghua_id?: number
+          duration?: number | null
+          episode_number?: number
+          id?: string
+          is_vip?: boolean
+          release_date?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_donghua_id_fkey"
+            columns: ["donghua_id"]
+            isOneToOne: false
+            referencedRelation: "donghua"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          role: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          role?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          role?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
