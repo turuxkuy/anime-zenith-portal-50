@@ -10,9 +10,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Update navigation based on auth status
+  updateNavigation();
+  
   // Load donghua details
   loadDonghuaDetails();
 });
+
+// Function to update navigation (same as in main.js)
+async function updateNavigation() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const isAuthenticated = !!data.session;
+    
+    const navMenu = document.querySelector('.nav-menu');
+    if (!navMenu) return;
+    
+    // Get current navigation items
+    const currentNavItems = Array.from(navMenu.querySelectorAll('li a'));
+    const hasLoginLink = currentNavItems.some(link => link.href.includes('login.html'));
+    const hasUserLink = currentNavItems.some(link => link.href.includes('user.html'));
+    const hasAdminLink = currentNavItems.some(link => link.href.includes('admin.html'));
+    
+    if (isAuthenticated) {
+      // User is logged in
+      const role = localStorage.getItem('role') || 'user';
+      
+      // Remove login link if it exists
+      if (hasLoginLink) {
+        const loginItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
+          li.querySelector('a')?.href.includes('login.html')
+        );
+        if (loginItem) loginItem.remove();
+      }
+      
+      // Add user link if it doesn't exist
+      if (!hasUserLink) {
+        const userItem = document.createElement('li');
+        userItem.innerHTML = `<a href="user.html">Akun</a>`;
+        navMenu.appendChild(userItem);
+      }
+      
+      // Add admin link if admin and doesn't exist
+      if (role === 'admin' && !hasAdminLink) {
+        const adminItem = document.createElement('li');
+        adminItem.innerHTML = `<a href="admin.html">Admin</a>`;
+        navMenu.appendChild(adminItem);
+      }
+    } else {
+      // User is not logged in
+      
+      // Add login link if it doesn't exist
+      if (!hasLoginLink) {
+        const loginItem = document.createElement('li');
+        loginItem.innerHTML = `<a href="login.html">Masuk</a>`;
+        navMenu.appendChild(loginItem);
+      }
+      
+      // Remove user link if it exists
+      if (hasUserLink) {
+        const userItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
+          li.querySelector('a')?.href.includes('user.html')
+        );
+        if (userItem) userItem.remove();
+      }
+      
+      // Remove admin link if it exists
+      if (hasAdminLink) {
+        const adminItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
+          li.querySelector('a')?.href.includes('admin.html')
+        );
+        if (adminItem) adminItem.remove();
+      }
+    }
+  } catch (error) {
+    console.error('Error updating navigation:', error);
+  }
+}
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -22,133 +96,123 @@ function getUrlParameter(name) {
   return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
-// Function to load donghua details
-function loadDonghuaDetails() {
+// Function to load donghua details from Supabase
+async function loadDonghuaDetails() {
   const donghuaId = getUrlParameter('id');
   if (!donghuaId) {
     window.location.href = 'index.html';
     return;
   }
 
-  // Get donghua data from localStorage
-  const donghuaData = JSON.parse(localStorage.getItem('donghuaData')) || [];
-  const donghua = donghuaData[donghuaId];
+  try {
+    // Show loading state
+    document.getElementById('donghuaBackdrop').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+    
+    // Fetch donghua data from Supabase
+    const { data: donghua, error } = await supabase
+      .from('donghua')
+      .select('*')
+      .eq('id', donghuaId)
+      .single();
+      
+    if (error) throw error;
+    
+    if (!donghua) {
+      window.location.href = 'index.html';
+      return;
+    }
 
-  if (!donghua) {
-    window.location.href = 'index.html';
-    return;
+    // Update page title
+    document.title = `${donghua.title} - Zenith Donghua`;
+
+    // Set backdrop image
+    const backdropElement = document.getElementById('donghuaBackdrop');
+    if (backdropElement) {
+      backdropElement.style.backgroundImage = `linear-gradient(to bottom, rgba(26, 31, 44, 0.5), rgba(26, 31, 44, 0.9)), url('${donghua.backdrop_url || 'images/default-backdrop.jpg'}')`;
+      backdropElement.style.backgroundSize = 'cover';
+      backdropElement.style.backgroundPosition = 'center';
+      backdropElement.innerHTML = ''; // Clear loading spinner
+    }
+
+    // Set poster image
+    const posterElement = document.getElementById('donghuaPoster');
+    if (posterElement) {
+      posterElement.innerHTML = `<img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">`;
+    }
+
+    // Set donghua details
+    document.getElementById('donghuaTitle').textContent = donghua.title;
+    document.getElementById('donghuaYear').textContent = donghua.year;
+    document.getElementById('donghuaGenre').textContent = donghua.genre;
+    document.getElementById('donghuaStatus').textContent = donghua.status;
+    document.getElementById('donghuaRating').textContent = donghua.rating;
+    document.getElementById('donghuaSynopsis').textContent = donghua.synopsis;
+
+    // Load episodes for this donghua
+    loadEpisodes(donghuaId);
+  } catch (error) {
+    console.error('Error loading donghua details:', error);
+    document.getElementById('donghuaBackdrop').innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
   }
-
-  // Update page title
-  document.title = `${donghua.title} - Zenith Donghua`;
-
-  // Set backdrop image
-  const backdropElement = document.getElementById('donghuaBackdrop');
-  if (backdropElement) {
-    backdropElement.style.backgroundImage = `linear-gradient(to bottom, rgba(26, 31, 44, 0.5), rgba(26, 31, 44, 0.9)), url('${donghua.backdrop || 'images/default-backdrop.jpg'}')`;
-    backdropElement.style.backgroundSize = 'cover';
-    backdropElement.style.backgroundPosition = 'center';
-  }
-
-  // Set poster image
-  const posterElement = document.getElementById('donghuaPoster');
-  if (posterElement) {
-    posterElement.innerHTML = `<img src="${donghua.poster || 'images/default-poster.jpg'}" alt="${donghua.title}">`;
-  }
-
-  // Set donghua details
-  document.getElementById('donghuaTitle').textContent = donghua.title;
-  document.getElementById('donghuaYear').textContent = donghua.year;
-  document.getElementById('donghuaGenre').textContent = donghua.genre;
-  document.getElementById('donghuaStatus').textContent = donghua.status;
-  document.getElementById('donghuaRating').textContent = donghua.rating;
-  document.getElementById('donghuaSynopsis').textContent = donghua.synopsis;
-
-  // Load episodes for this donghua
-  loadEpisodes(donghuaId);
 }
 
-// Function to load episodes
-function loadEpisodes(donghuaId) {
+// Function to load episodes from Supabase
+async function loadEpisodes(donghuaId) {
   const episodesList = document.getElementById('episodeList');
   if (!episodesList) return;
 
-  // Get episodes data from localStorage
-  let episodesData = JSON.parse(localStorage.getItem('episodesData')) || [];
-
-  // Filter episodes for this donghua
-  const donghuaEpisodes = episodesData.filter(episode => episode.donghuaId == donghuaId);
-
-  // If no episodes exist, create some sample episodes
-  if (donghuaEpisodes.length === 0) {
-    const newEpisodes = createSampleEpisodes(donghuaId);
+  try {
+    // Show loading state
+    episodesList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
-    // Add these episodes to the main episodes data
-    if (episodesData.length === 0) {
-      episodesData = newEpisodes;
+    // Fetch episodes data from Supabase
+    const { data: episodes, error } = await supabase
+      .from('episodes')
+      .select('*')
+      .eq('donghua_id', donghuaId)
+      .order('episode_number', { ascending: true });
+      
+    if (error) throw error;
+
+    // Clear the episodes list before adding new items
+    episodesList.innerHTML = '';
+
+    // Create episode items
+    if (episodes.length === 0) {
+      episodesList.innerHTML = '<p class="empty-message">Belum ada episode untuk donghua ini.</p>';
     } else {
-      episodesData = [...episodesData, ...newEpisodes];
+      episodes.forEach(episode => {
+        const episodeItem = document.createElement('a');
+        episodeItem.href = `episode.html?id=${episode.id}&donghuaId=${donghuaId}`;
+        episodeItem.className = 'episode-item';
+        
+        let vipBadge = '';
+        if (episode.is_vip) {
+          vipBadge = '<span class="episode-vip"><i class="fas fa-crown"></i> VIP</span>';
+        }
+        
+        episodeItem.innerHTML = `
+          <div class="episode-thumbnail">
+            <img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="Episode ${episode.episode_number}">
+          </div>
+          <div class="episode-info">
+            <div class="episode-number">Episode ${episode.episode_number}</div>
+            <h3 class="episode-title">${episode.title}</h3>
+          </div>
+          ${vipBadge}
+        `;
+        
+        episodesList.appendChild(episodeItem);
+      });
     }
-    
-    localStorage.setItem('episodesData', JSON.stringify(episodesData));
-  }
-
-  // Clear the episodes list before adding new items
-  episodesList.innerHTML = '';
-
-  // Sort episodes by episode number
-  const sortedEpisodes = donghuaEpisodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
-
-  // Create episode items
-  if (sortedEpisodes.length === 0) {
-    episodesList.innerHTML = '<p class="empty-message">Belum ada episode untuk donghua ini.</p>';
-  } else {
-    sortedEpisodes.forEach(episode => {
-      const episodeItem = document.createElement('a');
-      episodeItem.href = `episode.html?id=${episode.id}&donghuaId=${donghuaId}`;
-      episodeItem.className = 'episode-item';
-      
-      let vipBadge = '';
-      if (episode.isVip) {
-        vipBadge = '<span class="episode-vip"><i class="fas fa-crown"></i> VIP</span>';
-      }
-      
-      episodeItem.innerHTML = `
-        <div class="episode-thumbnail">
-          <img src="${episode.thumbnail || 'images/default-thumbnail.jpg'}" alt="Episode ${episode.episodeNumber}">
-        </div>
-        <div class="episode-info">
-          <div class="episode-number">Episode ${episode.episodeNumber}</div>
-          <h3 class="episode-title">${episode.title}</h3>
-        </div>
-        ${vipBadge}
-      `;
-      
-      episodesList.appendChild(episodeItem);
-    });
+  } catch (error) {
+    console.error('Error loading episodes:', error);
+    episodesList.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat episode: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
   }
 }
 
-// Function to create sample episodes
-function createSampleEpisodes(donghuaId) {
-  // Create different numbers of episodes based on donghua ID
-  const episodeCount = 10 + (donghuaId % 5) * 2; // Between 10 and 18 episodes
-  const episodes = [];
-  
-  for (let i = 1; i <= episodeCount; i++) {
-    episodes.push({
-      id: `${donghuaId}-${i}`, // Composite ID to ensure uniqueness
-      donghuaId: donghuaId,
-      episodeNumber: i,
-      title: `Episode ${i}`,
-      description: `This is the description for episode ${i} of this amazing donghua series.`,
-      thumbnail: `https://via.placeholder.com/300x170?text=Episode+${i}`,
-      videoUrl: `#`, // Would be a real URL in production
-      duration: 24, // minutes
-      isVip: i > episodeCount - 3, // Make the last 2 episodes VIP only
-      releaseDate: new Date(2023, 0, i).toISOString().split('T')[0] // Format: YYYY-MM-DD
-    });
-  }
-  
-  return episodes;
+// Helper function to format date
+function formatDate(dateString) {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('id-ID', options);
 }

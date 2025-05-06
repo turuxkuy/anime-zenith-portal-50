@@ -10,115 +10,129 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Update navigation based on auth status
+  updateNavigation();
+  
   // Load donghua data for the homepage
   loadDonghuaList();
 });
 
-// Function to load donghua list
-function loadDonghuaList() {
-  const donghuaGrid = document.getElementById('donghuaGrid');
-  if (!donghuaGrid) return;
-
-  // Try to get donghua data from localStorage
-  let donghuaData = JSON.parse(localStorage.getItem('donghuaData')) || [];
-
-  // If no data exists, create some sample data
-  if (donghuaData.length === 0) {
-    donghuaData = createSampleDonghua();
-    localStorage.setItem('donghuaData', JSON.stringify(donghuaData));
+// Function to update navigation based on authentication
+async function updateNavigation() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const isAuthenticated = !!data.session;
+    
+    const navMenu = document.querySelector('.nav-menu');
+    if (!navMenu) return;
+    
+    // Get current navigation items
+    const currentNavItems = Array.from(navMenu.querySelectorAll('li a'));
+    const hasLoginLink = currentNavItems.some(link => link.href.includes('login.html'));
+    const hasUserLink = currentNavItems.some(link => link.href.includes('user.html'));
+    const hasAdminLink = currentNavItems.some(link => link.href.includes('admin.html'));
+    
+    if (isAuthenticated) {
+      // User is logged in
+      const role = localStorage.getItem('role') || 'user';
+      
+      // Remove login link if it exists
+      if (hasLoginLink) {
+        const loginItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
+          li.querySelector('a')?.href.includes('login.html')
+        );
+        if (loginItem) loginItem.remove();
+      }
+      
+      // Add user link if it doesn't exist
+      if (!hasUserLink) {
+        const userItem = document.createElement('li');
+        userItem.innerHTML = `<a href="user.html">Akun</a>`;
+        navMenu.appendChild(userItem);
+      }
+      
+      // Add admin link if admin and doesn't exist
+      if (role === 'admin' && !hasAdminLink) {
+        const adminItem = document.createElement('li');
+        adminItem.innerHTML = `<a href="admin.html">Admin</a>`;
+        navMenu.appendChild(adminItem);
+      }
+    } else {
+      // User is not logged in
+      
+      // Add login link if it doesn't exist
+      if (!hasLoginLink) {
+        const loginItem = document.createElement('li');
+        loginItem.innerHTML = `<a href="login.html">Masuk</a>`;
+        navMenu.appendChild(loginItem);
+      }
+      
+      // Remove user link if it exists
+      if (hasUserLink) {
+        const userItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
+          li.querySelector('a')?.href.includes('user.html')
+        );
+        if (userItem) userItem.remove();
+      }
+      
+      // Remove admin link if it exists
+      if (hasAdminLink) {
+        const adminItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
+          li.querySelector('a')?.href.includes('admin.html')
+        );
+        if (adminItem) adminItem.remove();
+      }
+    }
+  } catch (error) {
+    console.error('Error updating navigation:', error);
   }
-
-  // Clear the grid before adding new items
-  donghuaGrid.innerHTML = '';
-
-  // Create donghua cards for each item
-  donghuaData.forEach((donghua, index) => {
-    const donghuaCard = document.createElement('a');
-    donghuaCard.href = `donghua.html?id=${index}`;
-    donghuaCard.className = 'donghua-card';
-    donghuaCard.innerHTML = `
-      <img src="${donghua.poster || 'images/default-poster.jpg'}" alt="${donghua.title}">
-      <div class="donghua-overlay">
-        <h3 class="donghua-title">${donghua.title}</h3>
-        <div class="donghua-meta">
-          <span>${donghua.year}</span>
-          <span>${donghua.genre}</span>
-          <span>${donghua.status}</span>
-        </div>
-      </div>
-    `;
-    donghuaGrid.appendChild(donghuaCard);
-  });
 }
 
-// Function to create sample donghua data
-function createSampleDonghua() {
-  return [
-    {
-      id: 0,
-      title: "Battle Through the Heavens",
-      year: 2018,
-      genre: "Action, Fantasy",
-      status: "Ongoing",
-      rating: 8.5,
-      synopsis: "Xiao Yan, whose mother was killed when he was just 9 years old. Xiao Yan was once a talented boy but 3 years ago his powers got sealed. Now he meets Yao Chen who helps him become stronger.",
-      poster: "https://via.placeholder.com/300x450?text=Battle+Through+the+Heavens",
-      backdrop: "https://via.placeholder.com/800x450?text=Battle+Through+the+Heavens"
-    },
-    {
-      id: 1,
-      title: "Soul Land",
-      year: 2019,
-      genre: "Adventure, Fantasy",
-      status: "Ongoing",
-      rating: 8.8,
-      synopsis: "Tang San spends his life in pursuit of becoming a great soul master, and after helping his teacher become the greatest ever, Tang San learns that he can control his spirit when he forms a contract with a blue silver grass, which is a spirit a hundred years old.",
-      poster: "https://via.placeholder.com/300x450?text=Soul+Land",
-      backdrop: "https://via.placeholder.com/800x450?text=Soul+Land"
-    },
-    {
-      id: 2,
-      title: "The King's Avatar",
-      year: 2017,
-      genre: "Action, Game",
-      status: "Completed",
-      rating: 9.2,
-      synopsis: "A professional gamer is forced to retire from an elite team. Looking for a fresh start, he begins his journey in a new game server, creating a new character and using his extensive gaming knowledge to climb the ranks.",
-      poster: "https://via.placeholder.com/300x450?text=The+King's+Avatar",
-      backdrop: "https://via.placeholder.com/800x450?text=The+King's+Avatar"
-    },
-    {
-      id: 3,
-      title: "Martial Universe",
-      year: 2020,
-      genre: "Action, Martial Arts",
-      status: "Ongoing",
-      rating: 7.9,
-      synopsis: "Lin Dong, a child from a small village discovers a mysterious stone talisman that grants him powers and begins a journey of discovering earth's secrets, fighting monsters, protecting his family and realizing his own destiny.",
-      poster: "https://via.placeholder.com/300x450?text=Martial+Universe",
-      backdrop: "https://via.placeholder.com/800x450?text=Martial+Universe"
-    },
-    {
-      id: 4,
-      title: "Spirit Sword Mountain",
-      year: 2019,
-      genre: "Comedy, Fantasy",
-      status: "Completed",
-      rating: 8.3,
-      synopsis: "Wang Lu, a smart boy with low physical strength from a poor family, is very calculating and unemotional towards his classmates. When isekaied, he learns to strategize against monsters in a fantasy world.",
-      poster: "https://via.placeholder.com/300x450?text=Spirit+Sword+Mountain",
-      backdrop: "https://via.placeholder.com/800x450?text=Spirit+Sword+Mountain"
-    },
-    {
-      id: 5,
-      title: "The Daily Life of the Immortal King",
-      year: 2020,
-      genre: "Comedy, Fantasy",
-      status: "Ongoing",
-      rating: 8.7,
-      synopsis: "Wang Ling has become super powerful since childhood. But now he just wants to be a normal high school student and not attract attention. However, he can't help but attract girls and other powerful beings.",
-      poster: "https://via.placeholder.com/300x450?text=Immortal+King",
-      backdrop: "https://via.placeholder.com/800x450?text=Immortal+King"
+// Function to load donghua list from Supabase
+async function loadDonghuaList() {
+  const donghuaGrid = document.getElementById('donghuaGrid');
+  if (!donghuaGrid) return;
+  
+  try {
+    // Show loading state
+    donghuaGrid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+    
+    // Fetch donghua data from Supabase
+    const { data: donghuaData, error } = await supabase
+      .from('donghua')
+      .select('*')
+      .order('title', { ascending: true });
+      
+    if (error) throw error;
+    
+    // Clear the grid before adding new items
+    donghuaGrid.innerHTML = '';
+    
+    if (donghuaData.length === 0) {
+      donghuaGrid.innerHTML = '<p class="empty-message">Belum ada donghua tersedia.</p>';
+      return;
     }
-  ];
+
+    // Create donghua cards for each item
+    donghuaData.forEach((donghua) => {
+      const donghuaCard = document.createElement('a');
+      donghuaCard.href = `donghua.html?id=${donghua.id}`;
+      donghuaCard.className = 'donghua-card';
+      donghuaCard.innerHTML = `
+        <img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">
+        <div class="donghua-overlay">
+          <h3 class="donghua-title">${donghua.title}</h3>
+          <div class="donghua-meta">
+            <span>${donghua.year}</span>
+            <span>${donghua.genre}</span>
+            <span>${donghua.status}</span>
+          </div>
+        </div>
+      `;
+      donghuaGrid.appendChild(donghuaCard);
+    });
+  } catch (error) {
+    console.error('Error loading donghua list:', error);
+    donghuaGrid.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+  }
 }
