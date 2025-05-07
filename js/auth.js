@@ -149,8 +149,48 @@ document.addEventListener('DOMContentLoaded', function() {
       if (window.location.pathname.includes('login.html')) {
         window.location.href = 'index.html';
       }
+      
+      // Update UI elements based on auth status
+      updateAuthUI(true);
+    } else {
+      updateAuthUI(false);
     }
   };
+  
+  // Update UI based on auth status
+  function updateAuthUI(isLoggedIn) {
+    const loginBtn = document.getElementById('loginBtn');
+    const profileLink = document.querySelectorAll('.profile-link');
+    const adminLink = document.getElementById('adminLink');
+    
+    if (isLoggedIn) {
+      // User is logged in
+      if (loginBtn) loginBtn.style.display = 'none';
+      
+      // Show profile links
+      profileLink.forEach(link => {
+        if (link) link.style.display = 'inline-block';
+      });
+      
+      // Check if user is admin and show admin link
+      const userRole = localStorage.getItem('role');
+      if (adminLink && userRole === 'admin') {
+        adminLink.style.display = 'inline-block';
+      } else if (adminLink) {
+        adminLink.style.display = 'none';
+      }
+    } else {
+      // User is not logged in
+      if (loginBtn) loginBtn.style.display = 'inline-block';
+      
+      // Hide profile and admin links
+      profileLink.forEach(link => {
+        if (link) link.style.display = 'none';
+      });
+      
+      if (adminLink) adminLink.style.display = 'none';
+    }
+  }
   
   checkAuthStatus();
 });

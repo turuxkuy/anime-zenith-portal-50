@@ -4,9 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zenith Donghua - Streaming Donghua Terbaik</title>
+  <title>Zenith Donghua - Platform Streaming Anime Donghua</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/auth.js"></script>
 </head>
 <body>
   <header>
@@ -19,26 +22,16 @@
       </div>
       <ul class="nav-menu">
         <li><a href="index.html" class="active">Beranda</a></li>
-        <li><a href="user.html">Akun</a></li>
+        <li><a href="donghua.html">Donghua</a></li>
+        <li><a href="user.html" class="profile-link" style="display: none;">Akun</a></li>
+        <li><a href="admin.html" id="adminLink" style="display: none;">Admin</a></li>
         <li><a href="login.html" id="loginBtn">Masuk</a></li>
       </ul>
     </nav>
   </header>
 
   <main>
-    <section class="hero">
-      <div class="hero-content">
-        <h1>Streaming Donghua Terbaik</h1>
-        <p>Nikmati ribuan episode donghua dengan kualitas terbaik</p>
-      </div>
-    </section>
-
-    <section class="donghua-list">
-      <h2>Donghua Terbaru</h2>
-      <div class="donghua-grid" id="donghuaGrid">
-        <!-- Donghua posters will be loaded here via JavaScript -->
-      </div>
-    </section>
+    <!-- Content will be added by js/main.js -->
   </main>
 
   <footer>
@@ -51,8 +44,8 @@
         <h3>Tautan</h3>
         <ul>
           <li><a href="index.html">Beranda</a></li>
+          <li><a href="donghua.html">Donghua</a></li>
           <li><a href="user.html">Akun</a></li>
-          <li><a href="#">Bantuan</a></li>
         </ul>
       </div>
       <div class="footer-social">
@@ -70,6 +63,5 @@
   </footer>
 
   <script src="js/main.js"></script>
-  <script src="js/auth.js"></script>
 </body>
 </html>
