@@ -27,6 +27,7 @@ const supabaseStorage = {
         error: null
       };
     } catch (err) {
+      console.error("Storage upload error:", err);
       return {
         data: null,
         error: err
@@ -44,7 +45,50 @@ const supabaseStorage = {
       
       return { data, error: null };
     } catch (err) {
+      console.error("Storage delete error:", err);
+      return { data: null, error: err };
+    }
+  },
+  
+  createBucket: async (bucketName) => {
+    try {
+      const { data, error } = await supabase.storage.createBucket(bucketName, {
+        public: true
+      });
+      
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (err) {
+      console.error("Create bucket error:", err);
       return { data: null, error: err };
     }
   }
 };
+
+// Check if storage buckets exist and create them if they don't
+async function ensureStorageBuckets() {
+  const requiredBuckets = ['posters', 'backdrops', 'thumbnails', 'videos'];
+  
+  try {
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    
+    if (error) throw error;
+    
+    const existingBuckets = buckets.map(bucket => bucket.name);
+    
+    for (const bucket of requiredBuckets) {
+      if (!existingBuckets.includes(bucket)) {
+        console.log(`Creating bucket: ${bucket}`);
+        await supabaseStorage.createBucket(bucket);
+      }
+    }
+    
+    console.log("All required storage buckets are ready");
+  } catch (err) {
+    console.error("Error checking/creating storage buckets:", err);
+  }
+}
+
+// Call this function when the admin page loads
+document.addEventListener('DOMContentLoaded', ensureStorageBuckets);
