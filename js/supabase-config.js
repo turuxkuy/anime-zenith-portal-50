@@ -3,12 +3,21 @@ const SUPABASE_URL = "https://eguwfitbjuzzwbgalwcx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVndXdmaXRianV6endiZ2Fsd2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1NDQ4OTgsImV4cCI6MjA2MjEyMDg5OH0.nYgvViJgO67L5nNYEejoW5KajcXlryTThTzA1bvUO9k";
 
 // Initialize the Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
 
 // Storage helper
 const supabaseStorage = {
   uploadFile: async (bucket, path, file) => {
     try {
+      // Ensure the bucket exists first
+      await ensureStorageBuckets();
+      
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(path, file, {
@@ -87,7 +96,7 @@ async function ensureStorageBuckets() {
       return;
     }
     
-    console.log("Existing buckets:", buckets.map(b => b.name).join(", ") || "none");
+    console.log("Existing buckets:", buckets?.map(b => b.name).join(", ") || "none");
     const existingBuckets = buckets ? buckets.map(bucket => bucket.name) : [];
     
     for (const bucket of requiredBuckets) {
@@ -111,12 +120,32 @@ async function ensureStorageBuckets() {
   }
 }
 
-// Call this function when the page loads to ensure buckets exist
+// Create a table for VIP requests if it doesn't exist yet
+async function ensureVipRequestsTable() {
+  try {
+    const { error } = await supabase.rpc('ensure_vip_requests_table');
+    
+    if (error) {
+      console.error("Failed to ensure vip_requests table:", error);
+    }
+  } catch (err) {
+    console.error("Error creating VIP requests table:", err);
+  }
+}
+
+// Call these functions when the page loads to ensure everything exists
 document.addEventListener('DOMContentLoaded', () => {
   const currentPath = window.location.pathname;
-  // Only check buckets on admin page or when needed
+  
+  // Check buckets on admin page or when needed for uploads
   if (currentPath.includes('admin.html')) {
     console.log("Admin page detected, checking storage buckets");
     ensureStorageBuckets();
+    ensureVipRequestsTable();
+  }
+  
+  // For user page, ensure VIP requests table exists
+  if (currentPath.includes('user.html')) {
+    ensureVipRequestsTable();
   }
 });

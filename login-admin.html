@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Zenith Donghua</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">
+        <a href="index.html">Zenith<span>Donghua</span></a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="auth-section admin-login">
+      <div class="auth-container">
+        <h1>Admin Login</h1>
+        <form class="auth-form" id="adminLoginForm">
+          <h2>Masuk sebagai Administrator</h2>
+          <div id="adminLoginError" class="error-message"></div>
+          <div class="form-group">
+            <label for="adminEmail">Email</label>
+            <input type="email" id="adminEmail" name="email" required>
+          </div>
+          <div class="form-group">
+            <label for="adminPassword">Password</label>
+            <input type="password" id="adminPassword" name="password" required>
+          </div>
+          <button type="submit" class="auth-button">Masuk</button>
+          <div class="back-link">
+            <a href="login.html">Kembali ke login pengguna</a>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-bottom">
+      <p>&copy; 2025 ZenithDonghua. Semua hak dilindungi.</p>
+    </div>
+  </footer>
+
+  <script src="js/admin-login.js"></script>
+</body>
+</html>
