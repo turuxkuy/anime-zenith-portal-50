@@ -50,17 +50,24 @@ const supabaseStorage = {
     }
   },
   
-  createBucket: async (bucketName) => {
+  createBucket: async (bucketName, isPublic = true) => {
     try {
       const { data, error } = await supabase.storage.createBucket(bucketName, {
-        public: true
+        public: isPublic
       });
       
-      if (error) throw error;
+      if (error) {
+        // If bucket already exists, this is not an error we need to report
+        if (error.message && error.message.includes("already exists")) {
+          console.log(`Bucket ${bucketName} already exists`);
+          return { data: { name: bucketName }, error: null };
+        }
+        throw error;
+      }
       
       return { data, error: null };
     } catch (err) {
-      console.error("Create bucket error:", err);
+      console.error(`Create bucket error (${bucketName}):`, err);
       return { data: null, error: err };
     }
   }
@@ -71,24 +78,45 @@ async function ensureStorageBuckets() {
   const requiredBuckets = ['posters', 'backdrops', 'thumbnails', 'videos'];
   
   try {
+    console.log("Checking storage buckets...");
+    
     const { data: buckets, error } = await supabase.storage.listBuckets();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Failed to list buckets:", error);
+      return;
+    }
     
-    const existingBuckets = buckets.map(bucket => bucket.name);
+    console.log("Existing buckets:", buckets.map(b => b.name).join(", ") || "none");
+    const existingBuckets = buckets ? buckets.map(bucket => bucket.name) : [];
     
     for (const bucket of requiredBuckets) {
       if (!existingBuckets.includes(bucket)) {
         console.log(`Creating bucket: ${bucket}`);
-        await supabaseStorage.createBucket(bucket);
+        const { error: createError } = await supabaseStorage.createBucket(bucket);
+        
+        if (createError) {
+          console.error(`Failed to create bucket ${bucket}:`, createError);
+        } else {
+          console.log(`Successfully created bucket: ${bucket}`);
+        }
+      } else {
+        console.log(`Bucket ${bucket} already exists`);
       }
     }
     
-    console.log("All required storage buckets are ready");
+    console.log("All required storage buckets are checked");
   } catch (err) {
     console.error("Error checking/creating storage buckets:", err);
   }
 }
 
-// Call this function when the admin page loads
-document.addEventListener('DOMContentLoaded', ensureStorageBuckets);
+// Call this function when the page loads to ensure buckets exist
+document.addEventListener('DOMContentLoaded', () => {
+  const currentPath = window.location.pathname;
+  // Only check buckets on admin page or when needed
+  if (currentPath.includes('admin.html')) {
+    console.log("Admin page detected, checking storage buckets");
+    ensureStorageBuckets();
+  }
+});
