@@ -428,36 +428,32 @@ async function loadUsersTable() {
 // Function to setup donghua form
 function setupDonghuaForm() {
   const form = document.getElementById('donghuaForm');
-  const posterUpload = document.getElementById('posterUpload');
-  const backdropUpload = document.getElementById('backdropUpload');
+  const posterUrlInput = document.getElementById('posterUrl');
+  const backdropUrlInput = document.getElementById('backdropUrl');
   
-  if (!form || !posterUpload || !backdropUpload) return;
+  if (!form || !posterUrlInput || !backdropUrlInput) return;
   
-  // Preview poster image when selected
-  posterUpload.addEventListener('change', function(e) {
-    const file = e.target.files[0];
+  // Preview poster image when URL is entered
+  posterUrlInput.addEventListener('change', function() {
+    const url = this.value;
     const posterPreview = document.getElementById('posterPreview');
     
-    if (file && file.type.match('image.*')) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        posterPreview.innerHTML = `<img src="${e.target.result}" alt="Poster Preview">`;
-      };
-      reader.readAsDataURL(file);
+    if (url && isValidUrl(url)) {
+      posterPreview.innerHTML = `<img src="${url}" alt="Poster Preview">`;
+    } else {
+      posterPreview.innerHTML = '';
     }
   });
   
-  // Preview backdrop image when selected
-  backdropUpload.addEventListener('change', function(e) {
-    const file = e.target.files[0];
+  // Preview backdrop image when URL is entered
+  backdropUrlInput.addEventListener('change', function() {
+    const url = this.value;
     const backdropPreview = document.getElementById('backdropPreview');
     
-    if (file && file.type.match('image.*')) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        backdropPreview.innerHTML = `<img src="${e.target.result}" alt="Backdrop Preview">`;
-      };
-      reader.readAsDataURL(file);
+    if (url && isValidUrl(url)) {
+      backdropPreview.innerHTML = `<img src="${url}" alt="Backdrop Preview">`;
+    } else {
+      backdropPreview.innerHTML = '';
     }
   });
   
@@ -475,6 +471,8 @@ function setupDonghuaForm() {
     const status = document.getElementById('status').value;
     const rating = parseFloat(document.getElementById('rating').value);
     const synopsis = document.getElementById('synopsis').value;
+    const poster_url = document.getElementById('posterUrl').value;
+    const backdrop_url = document.getElementById('backdropUrl').value;
     
     // Create donghua object
     let donghua = {
@@ -484,52 +482,16 @@ function setupDonghuaForm() {
       status,
       rating,
       synopsis,
-      poster_url: null,
-      backdrop_url: null
+      poster_url,
+      backdrop_url
     };
     
     try {
       // Check if editing existing donghua
       const editId = form.getAttribute('data-id');
       
-      // Handle poster image
-      const posterFile = posterUpload.files[0];
-      if (posterFile) {
-        const posterPath = `donghua/${Date.now()}_poster_${posterFile.name.replace(/\s/g, '_')}`;
-        const posterUrl = await handleFileUpload(posterFile, 'posters', posterPath);
-        if (posterUrl) donghua.poster_url = posterUrl;
-      }
-      
-      // Handle backdrop image
-      const backdropFile = backdropUpload.files[0];
-      if (backdropFile) {
-        const backdropPath = `donghua/${Date.now()}_backdrop_${backdropFile.name.replace(/\s/g, '_')}`;
-        const backdropUrl = await handleFileUpload(backdropFile, 'backdrops', backdropPath);
-        if (backdropUrl) donghua.backdrop_url = backdropUrl;
-      }
-      
       let result;
       if (editId) {
-        // Get current donghua data to keep existing image URLs if not uploading new ones
-        if (!posterFile || !backdropFile) {
-          const { data: currentDonghua } = await supabase
-            .from('donghua')
-            .select('poster_url, backdrop_url')
-            .eq('id', editId)
-            .single();
-            
-          if (currentDonghua) {
-            // Keep existing image URLs if not uploading new ones
-            if (!posterFile && currentDonghua.poster_url) {
-              donghua.poster_url = currentDonghua.poster_url;
-            }
-            
-            if (!backdropFile && currentDonghua.backdrop_url) {
-              donghua.backdrop_url = currentDonghua.backdrop_url;
-            }
-          }
-        }
-        
         // Update existing donghua
         const { error } = await supabase
           .from('donghua')
@@ -572,23 +534,19 @@ function setupDonghuaForm() {
 // Function to setup episode form
 function setupEpisodeForm() {
   const form = document.getElementById('episodeForm');
-  const thumbnailUpload = document.getElementById('thumbnailUpload');
-  const videoUpload = document.getElementById('videoUpload');
-  const uploadProgress = document.getElementById('uploadProgress');
+  const thumbnailUrlInput = document.getElementById('thumbnailUrl');
   
-  if (!form || !thumbnailUpload || !videoUpload || !uploadProgress) return;
+  if (!form || !thumbnailUrlInput) return;
   
-  // Preview thumbnail image when selected
-  thumbnailUpload.addEventListener('change', function(e) {
-    const file = e.target.files[0];
+  // Preview thumbnail image when URL is entered
+  thumbnailUrlInput.addEventListener('change', function() {
+    const url = this.value;
     const thumbnailPreview = document.getElementById('thumbnailPreview');
     
-    if (file && file.type.match('image.*')) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        thumbnailPreview.innerHTML = `<img src="${e.target.result}" alt="Thumbnail Preview">`;
-      };
-      reader.readAsDataURL(file);
+    if (url && isValidUrl(url)) {
+      thumbnailPreview.innerHTML = `<img src="${url}" alt="Thumbnail Preview">`;
+    } else {
+      thumbnailPreview.innerHTML = '';
     }
   });
   
@@ -609,6 +567,8 @@ function setupEpisodeForm() {
     const description = document.getElementById('episodeDescription').value;
     const duration = parseInt(document.getElementById('episodeDuration').value);
     const isVip = document.getElementById('isVip').value === 'true';
+    const thumbnail_url = document.getElementById('thumbnailUrl').value;
+    const video_url = document.getElementById('videoUrl').value;
     
     // Generate UUID for new episode (if needed)
     const generateUUID = () => {
@@ -626,8 +586,8 @@ function setupEpisodeForm() {
       description,
       duration,
       is_vip: isVip,
-      thumbnail_url: null,
-      video_url: null,
+      thumbnail_url,
+      video_url,
       release_date: new Date().toISOString().split('T')[0]
     };
     
@@ -642,50 +602,8 @@ function setupEpisodeForm() {
         episode.id = episodeId;
       }
       
-      // Handle thumbnail image
-      const thumbnailFile = thumbnailUpload.files[0];
-      if (thumbnailFile) {
-        const thumbnailPath = `episodes/${donghuaId}-${episodeNumber}_thumb_${Date.now()}`;
-        const thumbnailUrl = await handleFileUpload(thumbnailFile, 'thumbnails', thumbnailPath);
-        if (thumbnailUrl) episode.thumbnail_url = thumbnailUrl;
-      }
-      
-      // Handle video file
-      const videoFile = videoUpload.files[0];
-      if (videoFile) {
-        // Show upload progress
-        uploadProgress.style.display = 'block';
-        uploadProgress.value = 0;
-        
-        const videoPath = `episodes/${donghuaId}-${episodeNumber}_video_${Date.now()}`;
-        const videoUrl = await handleFileUpload(videoFile, 'videos', videoPath, (progress) => {
-          uploadProgress.value = progress;
-        });
-        
-        if (videoUrl) episode.video_url = videoUrl;
-      }
-      
-      // If editing, get current episode data to keep existing URLs if not uploading new ones
+      // If editing, get current episode data for any missing values
       if (editId) {
-        if (!thumbnailFile || !videoFile) {
-          const { data: currentEpisode } = await supabase
-            .from('episodes')
-            .select('thumbnail_url, video_url')
-            .eq('id', editId)
-            .single();
-            
-          if (currentEpisode) {
-            // Keep existing URLs if not uploading new ones
-            if (!thumbnailFile && currentEpisode.thumbnail_url) {
-              episode.thumbnail_url = currentEpisode.thumbnail_url;
-            }
-            
-            if (!videoFile && currentEpisode.video_url) {
-              episode.video_url = currentEpisode.video_url;
-            }
-          }
-        }
-        
         // Update existing episode
         const { error } = await supabase
           .from('episodes')
@@ -712,7 +630,6 @@ function setupEpisodeForm() {
       // Reset form
       form.reset();
       document.getElementById('thumbnailPreview').innerHTML = '';
-      uploadProgress.style.display = 'none';
       
       // Reload table
       loadEpisodeTable();
@@ -983,6 +900,8 @@ function openDonghuaModal(donghua = null) {
     document.getElementById('status').value = donghua.status;
     document.getElementById('rating').value = donghua.rating;
     document.getElementById('synopsis').value = donghua.synopsis;
+    document.getElementById('posterUrl').value = donghua.poster_url || '';
+    document.getElementById('backdropUrl').value = donghua.backdrop_url || '';
     
     // Show existing images
     if (donghua.poster_url) {
@@ -1018,7 +937,6 @@ async function openEpisodeModal(episode = null) {
   // Clear form
   form.reset();
   document.getElementById('thumbnailPreview').innerHTML = '';
-  document.getElementById('uploadProgress').style.display = 'none';
   
   // Make sure donghua options are loaded
   await loadDonghuaOptions();
@@ -1034,6 +952,8 @@ async function openEpisodeModal(episode = null) {
     document.getElementById('episodeDescription').value = episode.description || '';
     document.getElementById('episodeDuration').value = episode.duration || '';
     document.getElementById('isVip').value = episode.is_vip ? 'true' : 'false';
+    document.getElementById('thumbnailUrl').value = episode.thumbnail_url || '';
+    document.getElementById('videoUrl').value = episode.video_url || '';
     
     // Show existing thumbnail
     if (episode.thumbnail_url) {
@@ -1053,22 +973,13 @@ async function openEpisodeModal(episode = null) {
   modal.style.display = 'flex';
 }
 
-// Function to handle file uploads to Supabase Storage
-async function handleFileUpload(file, bucket, path, onProgress) {
-  if (!file) return null;
-  
+// Helper function to check if a string is a valid URL
+function isValidUrl(string) {
   try {
-    // In a real app with proper Supabase storage setup, use this:
-    const { data, error } = await supabaseStorage.uploadFile(bucket, path, file);
-    
-    if (error) throw error;
-    if (onProgress) onProgress(100);
-    
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    showToast('Gagal mengupload file: ' + error.message, 'error');
-    return null;
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
   }
 }
 
@@ -1096,4 +1007,53 @@ function showToast(message, type = 'info') {
       toast.remove();
     }, 300);
   }, 3000);
+}
+
+// Function to check if the user is admin
+async function checkAdminAuth() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      window.location.href = 'login-admin.html';
+      return false;
+    }
+    
+    const { data: profileData, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.session.user.id)
+      .single();
+      
+    if (error || !profileData) {
+      await supabase.auth.signOut();
+      window.location.href = 'login-admin.html';
+      return false;
+    }
+    
+    if (profileData.role !== 'admin') {
+      await supabase.auth.signOut();
+      window.location.href = 'login.html';
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking admin auth:', error);
+    window.location.href = 'login-admin.html';
+    return false;
+  }
+}
+
+// Function to log out the user
+async function logoutUser() {
+  try {
+    await supabase.auth.signOut();
+    localStorage.removeItem('auth');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('role');
+    window.location.href = 'login-admin.html';
+  } catch (error) {
+    console.error('Error logging out:', error);
+    showToast('Gagal keluar dari akun: ' + error.message, 'error');
+  }
 }

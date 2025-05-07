@@ -157,13 +157,13 @@
                 <textarea id="synopsis" name="synopsis" rows="5" required></textarea>
               </div>
               <div class="form-group">
-                <label for="posterUpload">Upload Poster (JPG/PNG)</label>
-                <input type="file" id="posterUpload" name="posterUpload" accept="image/jpeg, image/png" required>
+                <label for="posterUrl">URL Poster</label>
+                <input type="url" id="posterUrl" name="posterUrl" placeholder="https://example.com/poster.jpg" required>
                 <div class="image-preview" id="posterPreview"></div>
               </div>
               <div class="form-group">
-                <label for="backdropUpload">Upload Backdrop (JPG/PNG)</label>
-                <input type="file" id="backdropUpload" name="backdropUpload" accept="image/jpeg, image/png" required>
+                <label for="backdropUrl">URL Backdrop</label>
+                <input type="url" id="backdropUrl" name="backdropUrl" placeholder="https://example.com/backdrop.jpg" required>
                 <div class="image-preview" id="backdropPreview"></div>
               </div>
               <button type="submit" class="submit-button">Simpan</button>
@@ -230,14 +230,13 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="thumbnailUpload">Upload Thumbnail (JPG/PNG)</label>
-                <input type="file" id="thumbnailUpload" name="thumbnailUpload" accept="image/jpeg, image/png" required>
+                <label for="thumbnailUrl">URL Thumbnail</label>
+                <input type="url" id="thumbnailUrl" name="thumbnailUrl" placeholder="https://example.com/thumbnail.jpg" required>
                 <div class="image-preview" id="thumbnailPreview"></div>
               </div>
               <div class="form-group">
-                <label for="videoUpload">Upload Video (MP4)</label>
-                <input type="file" id="videoUpload" name="videoUpload" accept="video/mp4" required>
-                <progress id="uploadProgress" value="0" max="100" style="display: none;"></progress>
+                <label for="videoUrl">URL Video (MP4 atau Embed)</label>
+                <input type="url" id="videoUrl" name="videoUrl" placeholder="https://example.com/video.mp4" required>
               </div>
               <button type="submit" class="submit-button">Simpan</button>
             </form>

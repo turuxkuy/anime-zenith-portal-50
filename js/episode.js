@@ -169,22 +169,37 @@ async function loadEpisodeDetails() {
     }
 
     // Setup video player
-    const videoPlayer = document.getElementById('videoPlayer');
-    const videoElement = document.getElementById('videoElement');
-    const videoSource = document.getElementById('videoSource');
+    const videoWrapper = document.getElementById('videoWrapper');
     const vipOverlay = document.getElementById('vipOverlay');
     
-    if (videoElement && videoSource && vipOverlay) {
+    if (videoWrapper && vipOverlay) {
       if (episode.is_vip && !isVip) {
         // Show VIP overlay for non-VIP users
         vipOverlay.style.display = 'flex';
-        videoSource.src = '';
-        videoElement.load();
+        videoWrapper.innerHTML = '';
       } else {
         // Show video for VIP users or non-VIP episodes
         vipOverlay.style.display = 'none';
-        videoSource.src = episode.video_url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'; // Default sample video
-        videoElement.load();
+        
+        const videoUrl = episode.video_url || '';
+        
+        // Check if it's an embed code or a direct video URL
+        if (isEmbedCode(videoUrl)) {
+          // If it's an embed code (iframe), insert it directly
+          videoWrapper.innerHTML = videoUrl;
+        } else if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+          // If it's a YouTube URL, convert to embed
+          const youtubeEmbedUrl = convertYoutubeToEmbed(videoUrl);
+          videoWrapper.innerHTML = `<iframe width="100%" height="100%" src="${youtubeEmbedUrl}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+          // If it's a direct video URL, use video element
+          videoWrapper.innerHTML = `
+            <video id="videoElement" controls>
+              <source src="${videoUrl}" type="video/mp4">
+              Browser Anda tidak mendukung tag video.
+            </video>
+          `;
+        }
       }
     }
 
@@ -204,6 +219,35 @@ async function loadEpisodeDetails() {
       </div>`;
     }
   }
+}
+
+// Function to check if a string is an embed code (contains iframe)
+function isEmbedCode(str) {
+  return typeof str === 'string' && str.toLowerCase().includes('<iframe');
+}
+
+// Function to convert YouTube URL to embed URL
+function convertYoutubeToEmbed(url) {
+  if (!url) return '';
+  
+  // Extract video ID from YouTube URL
+  let videoId = '';
+  
+  if (url.includes('youtube.com/watch')) {
+    // Format: https://www.youtube.com/watch?v=VIDEO_ID
+    const urlParams = new URLSearchParams(new URL(url).search);
+    videoId = urlParams.get('v');
+  } else if (url.includes('youtu.be/')) {
+    // Format: https://youtu.be/VIDEO_ID
+    videoId = url.split('youtu.be/')[1].split('?')[0];
+  }
+  
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+  
+  // Return original URL if not recognized
+  return url;
 }
 
 // Function to setup episode navigation

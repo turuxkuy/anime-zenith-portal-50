@@ -34,10 +34,9 @@
       <h1 id="episodeTitle">Memuat...</h1>
       <div class="video-container">
         <div class="video-player" id="videoPlayer">
-          <video id="videoElement" controls>
-            <source src="" type="video/mp4" id="videoSource">
-            Browser Anda tidak mendukung tag video.
-          </video>
+          <div id="videoWrapper">
+            <!-- Video will be loaded here dynamically (either native video player or iframe) -->
+          </div>
           <div class="vip-overlay" id="vipOverlay">
             <div class="vip-message">
               <i class="fas fa-crown"></i>
