@@ -8,6 +8,9 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabaseClient = window.supabase;
+  </script>
   <script src="js/supabase-config.js"></script>
 </head>
 <body>
@@ -47,6 +50,7 @@
               <input type="password" id="loginPassword" name="password" required>
             </div>
             <button type="submit" class="auth-button">Masuk</button>
+            <div id="loginSuccess" class="success-message" style="display: none;">Login berhasil! Mengalihkan...</div>
           </form>
 
           <form class="auth-form" id="registerForm">
@@ -103,6 +107,33 @@
     </div>
   </footer>
 
+  <script>
+    // Debugging script untuk halaman login
+    console.log("Login page loaded");
+    
+    window.addEventListener('load', async function() {
+      console.log("Window loaded, checking for existing session");
+      
+      try {
+        // Periksa apakah pengguna sudah login
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error checking session:", error);
+        }
+        
+        console.log("Session check result:", data);
+        
+        if (data.session) {
+          console.log("User already logged in, redirecting to index.html");
+          window.location.href = "index.html";
+        }
+      } catch (err) {
+        console.error("Error in session check:", err);
+      }
+    });
+  </script>
+  
   <script src="js/auth.js"></script>
 </body>
 </html>

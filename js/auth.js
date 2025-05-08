@@ -1,5 +1,6 @@
-
 document.addEventListener('DOMContentLoaded', function() {
+  console.log("Auth.js loaded");
+  
   // Tab switching functionality
   const authTabs = document.querySelectorAll('.auth-tab');
   const authForms = document.querySelectorAll('.auth-form');
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Login form submission
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
+    console.log("Login form found");
     loginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       
@@ -32,13 +34,22 @@ document.addEventListener('DOMContentLoaded', function() {
       const password = document.getElementById('loginPassword').value;
       const errorElement = document.getElementById('loginError');
       
+      console.log("Attempting login for email:", email);
+      
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email,
           password: password
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Login error:', error);
+          errorElement.textContent = 'Login gagal: ' + (error.message || 'Password atau email salah');
+          errorElement.style.display = 'block';
+          return;
+        }
+        
+        console.log('Login successful, user data:', data);
         
         if (data.user) {
           // Fetch user profile after login
@@ -48,21 +59,26 @@ document.addEventListener('DOMContentLoaded', function() {
             .eq('id', data.user.id)
             .single();
             
-          if (profileError && profileError.code !== 'PGRST116') {
+          if (profileError) {
             console.error('Error fetching user profile:', profileError);
+            // Continue login process even if profile fetch fails
+          } else {
+            console.log('Profile data retrieved:', profileData);
           }
           
           // Store user data
           localStorage.setItem('auth', 'true');
           localStorage.setItem('userId', data.user.id);
-          localStorage.setItem('username', profileData?.username || '');
+          localStorage.setItem('username', profileData?.username || email.split('@')[0]);
           localStorage.setItem('role', profileData?.role || 'user');
+          
+          console.log('Auth data stored in localStorage');
           
           // Redirect to homepage
           window.location.href = 'index.html';
         }
       } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login error (catch):', error);
         errorElement.textContent = 'Login gagal: ' + (error.message || 'Password atau email salah');
         errorElement.style.display = 'block';
       }
@@ -143,8 +159,11 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Check if user is already logged in
   const checkAuthStatus = async () => {
+    console.log("Checking auth status...");
     const { data } = await supabase.auth.getSession();
+    
     if (data.session) {
+      console.log("User is logged in, session:", data.session);
       // If on login page and already logged in, redirect to home
       if (window.location.pathname.includes('login.html')) {
         window.location.href = 'index.html';
@@ -153,12 +172,14 @@ document.addEventListener('DOMContentLoaded', function() {
       // Update UI elements based on auth status
       updateAuthUI(true);
     } else {
+      console.log("No active session found");
       updateAuthUI(false);
     }
   };
   
   // Update UI based on auth status
   function updateAuthUI(isLoggedIn) {
+    console.log("Updating UI based on login status:", isLoggedIn);
     const loginBtn = document.getElementById('loginBtn');
     const profileLink = document.querySelectorAll('.profile-link');
     const adminLink = document.getElementById('adminLink');
@@ -174,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Check if user is admin and show admin link
       const userRole = localStorage.getItem('role');
+      console.log("User role:", userRole);
       if (adminLink && userRole === 'admin') {
         adminLink.style.display = 'inline-block';
       } else if (adminLink) {
@@ -192,15 +214,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // Execute auth check on page load
   checkAuthStatus();
 });
 
 // Logout function (to be used in other pages)
 async function logoutUser() {
+  console.log("Attempting to log out user");
   try {
     const { error } = await supabase.auth.signOut();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Logout error:', error);
+      alert('Gagal keluar: ' + (error.message || 'Terjadi kesalahan'));
+      return;
+    }
+    
+    console.log("User logged out successfully");
     
     // Clear local storage
     localStorage.removeItem('auth');

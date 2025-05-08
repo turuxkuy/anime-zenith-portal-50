@@ -5,3 +5,43 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 // Initialize Supabase client
 const supabase = supabaseClient.createClient(supabaseUrl, supabaseAnonKey);
+
+// Log initialization to help with debugging
+console.log('Supabase client initialized with URL:', supabaseUrl);
+
+// Function to check if logged in - can be used across pages
+async function checkLoginStatus() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    console.log('Auth session check:', data.session ? 'Session exists' : 'No session found');
+    
+    if (error) {
+      console.error('Auth session error:', error);
+      return false;
+    }
+    
+    return !!data.session;
+  } catch (err) {
+    console.error('Error checking auth status:', err);
+    return false;
+  }
+}
+
+// Function to get user details - for displaying username, etc.
+async function getCurrentUser() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error || !data.session) {
+      console.log('No current user found');
+      return null;
+    }
+    
+    console.log('Current user ID:', data.session.user.id);
+    return data.session.user;
+  } catch (err) {
+    console.error('Error getting current user:', err);
+    return null;
+  }
+}
