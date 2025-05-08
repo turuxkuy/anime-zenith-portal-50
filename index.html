@@ -79,18 +79,25 @@
   </footer>
 
   <script>
-    // Debugging script untuk halaman index
-    console.log("Index page loaded");
+    // Add more detailed debugging on index page
+    console.log("Index page HTML loaded");
     
-    window.addEventListener('load', async function() {
-      console.log("Window loaded on index page, checking auth status");
-      console.log("Supabase object availability:", supabase ? "Available" : "Not available");
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("DOM fully loaded on index page");
       
-      if (typeof checkLoginStatus === 'function') {
-        const isLoggedIn = await checkLoginStatus();
-        console.log("User logged in status:", isLoggedIn);
+      if (typeof supabase === 'undefined') {
+        console.error("Supabase client NOT available on index page!");
       } else {
-        console.error("checkLoginStatus function not found!");
+        console.log("Supabase client loaded and available on index page");
+        
+        // Check existing session
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (error) {
+            console.error("Error checking session:", error);
+          } else {
+            console.log("Session check result:", data.session ? "Active session found" : "No active session");
+          }
+        });
       }
     });
   </script>

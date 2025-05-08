@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabaseClient = window.supabase;
+    console.log('Supabase JS loaded on user page');
+  </script>
   <script src="js/supabase-config.js"></script>
 </head>
 <body>
@@ -22,7 +26,7 @@
       <ul class="nav-menu">
         <li><a href="index.html">Beranda</a></li>
         <li><a href="donghua.html">Donghua</a></li>
-        <li><a href="user.html" class="active">Akun</a></li>
+        <li><a href="user.html" class="active profile-link">Akun</a></li>
         <li><a href="admin.html" id="adminLink" style="display: none;">Admin</a></li>
         <li><a href="login.html" id="loginBtn">Masuk</a></li>
       </ul>
@@ -176,7 +180,18 @@
     </div>
   </footer>
 
-  <script src="js/user.js"></script>
+  <script>
+    // Make sure auth.js runs after Supabase is fully initialized
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('User page ready, checking Supabase availability');
+      if (typeof supabase !== 'undefined') {
+        console.log('Supabase available on user page');
+      } else {
+        console.error('Supabase not available on user page!');
+      }
+    });
+  </script>
   <script src="js/auth.js"></script>
+  <script src="js/user.js"></script>
 </body>
 </html>

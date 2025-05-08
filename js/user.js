@@ -1,5 +1,7 @@
 
 document.addEventListener('DOMContentLoaded', async function() {
+  console.log('User profile page loaded');
+  
   // Check if Supabase JS is loaded
   if (typeof supabase === 'undefined') {
     console.error('Supabase client is not loaded. Make sure to include supabase-config.js');
@@ -7,67 +9,83 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   
   // Check authentication status
-  const { data } = await supabase.auth.getSession();
-  const isAuthenticated = !!data.session;
-  
-  // Get UI elements
-  const loginPrompt = document.getElementById('loginPrompt');
-  const profileContainer = document.getElementById('profileContainer');
-  const changePasswordBtn = document.getElementById('changePasswordBtn');
-  const changePasswordModal = document.getElementById('changePasswordModal');
-  const requestVipBtn = document.getElementById('requestVipBtn');
-  const requestVipModal = document.getElementById('requestVipModal');
-  const logoutButton = document.getElementById('logoutButton');
-  const regularUserCard = document.getElementById('regularUserCard');
-  const vipUserCard = document.getElementById('vipUserCard');
-
-  // Show/hide elements based on authentication
-  if (isAuthenticated) {
-    if (loginPrompt) loginPrompt.style.display = 'none';
-    if (profileContainer) profileContainer.style.display = 'block';
+  try {
+    const { data } = await supabase.auth.getSession();
+    const isAuthenticated = !!data.session;
     
-    // Load user data
-    await loadUserProfile(data.session.user.id);
-  } else {
-    if (loginPrompt) loginPrompt.style.display = 'block';
-    if (profileContainer) profileContainer.style.display = 'none';
-  }
+    console.log('Authentication status:', isAuthenticated ? 'Logged in' : 'Not logged in');
+    
+    // Get UI elements
+    const loginPrompt = document.getElementById('loginPrompt');
+    const profileContainer = document.getElementById('profileContainer');
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    const requestVipBtn = document.getElementById('requestVipBtn');
+    const requestVipModal = document.getElementById('requestVipModal');
+    const logoutButton = document.getElementById('logoutButton');
+    const regularUserCard = document.getElementById('regularUserCard');
+    const vipUserCard = document.getElementById('vipUserCard');
   
-  // Add event listeners
-  if (changePasswordBtn) {
-    changePasswordBtn.addEventListener('click', function() {
-      if (changePasswordModal) changePasswordModal.style.display = 'flex';
-    });
-  }
-  
-  if (requestVipBtn) {
-    requestVipBtn.addEventListener('click', async function() {
-      try {
-        // Send VIP request notification to admins
-        const userId = localStorage.getItem('userId');
-        const username = localStorage.getItem('username');
-        
-        await supabase
-          .from('vip_requests')
-          .insert([
-            {
-              user_id: userId,
-              username: username,
-              status: 'pending'
-            }
-          ]);
-        
-        // Show VIP request modal
-        if (requestVipModal) requestVipModal.style.display = 'flex';
-      } catch (error) {
-        console.error('Error sending VIP request:', error);
-        alert('Gagal mengirim permintaan: ' + (error.message || 'Terjadi kesalahan'));
-      }
-    });
-  }
-  
-  if (logoutButton) {
-    logoutButton.addEventListener('click', logoutUser);
+    // Show/hide elements based on authentication
+    if (isAuthenticated) {
+      console.log('User is authenticated, showing profile');
+      if (loginPrompt) loginPrompt.style.display = 'none';
+      if (profileContainer) profileContainer.style.display = 'block';
+      
+      // Load user data
+      await loadUserProfile(data.session.user.id);
+    } else {
+      console.log('User is not authenticated, showing login prompt');
+      if (loginPrompt) loginPrompt.style.display = 'block';
+      if (profileContainer) profileContainer.style.display = 'none';
+    }
+    
+    // Add event listeners
+    if (changePasswordBtn) {
+      changePasswordBtn.addEventListener('click', function() {
+        if (changePasswordModal) changePasswordModal.style.display = 'flex';
+      });
+    }
+    
+    if (requestVipBtn) {
+      requestVipBtn.addEventListener('click', async function() {
+        try {
+          // Send VIP request notification to admins
+          const userId = data.session.user.id;
+          
+          // Get username from profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', userId)
+            .single();
+            
+          const username = profileData?.username || 'User';
+          
+          await supabase
+            .from('vip_requests')
+            .insert([
+              {
+                user_id: userId,
+                username: username,
+                status: 'pending'
+              }
+            ]);
+          
+          // Show VIP request modal
+          if (requestVipModal) requestVipModal.style.display = 'flex';
+        } catch (error) {
+          console.error('Error sending VIP request:', error);
+          alert('Gagal mengirim permintaan: ' + (error.message || 'Terjadi kesalahan'));
+        }
+      });
+    }
+    
+    if (logoutButton) {
+      logoutButton.addEventListener('click', logoutUser);
+    }
+  } catch (error) {
+    console.error('Error checking authentication:', error);
   }
   
   // Close modals
@@ -104,6 +122,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       
       try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          throw new Error('Tidak ada sesi yang aktif');
+        }
+        
         // First, verify current password by signing in
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: data.session.user.email,
@@ -127,7 +150,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Reset form and close modal after 2 seconds
         changePasswordForm.reset();
         setTimeout(() => {
-          changePasswordModal.style.display = 'none';
+          const modal = document.getElementById('changePasswordModal');
+          if (modal) modal.style.display = 'none';
           errorElement.style.display = 'none';
           errorElement.style.color = '#FF3B30';
         }, 2000);
@@ -138,56 +162,66 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     });
   }
-  
-  // Function to load user profile data
-  async function loadUserProfile(userId) {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) throw error;
-      
-      if (profile) {
-        // Update profile elements
-        document.querySelectorAll('#profileUsername, #detailUsername').forEach(element => {
-          if (element) element.textContent = profile.username;
-        });
-        
-        if (document.getElementById('detailEmail')) {
-          document.getElementById('detailEmail').textContent = profile.email || '-';
-        }
-        
-        if (document.getElementById('detailRole')) {
-          document.getElementById('detailRole').textContent = profile.role === 'admin' ? 'Admin' : 
-                                                              profile.role === 'vip' ? 'VIP' : 'Regular';
-        }
-        
-        if (document.getElementById('userRole')) {
-          document.getElementById('userRole').textContent = profile.role === 'admin' ? 'Admin' : 
-                                                           profile.role === 'vip' ? 'VIP' : 'Regular';
-          document.getElementById('userRole').className = 'user-role ' + profile.role;
-        }
-        
-        if (document.getElementById('detailJoined')) {
-          const createdDate = new Date(profile.created_at).toLocaleDateString('id-ID');
-          document.getElementById('detailJoined').textContent = createdDate;
-        }
-        
-        // Show/hide VIP cards based on role
-        if (profile.role === 'vip' || profile.role === 'admin') {
-          if (regularUserCard) regularUserCard.style.display = 'none';
-          if (vipUserCard) vipUserCard.style.display = 'block';
-        } else {
-          if (regularUserCard) regularUserCard.style.display = 'block';
-          if (vipUserCard) vipUserCard.style.display = 'none';
-        }
-      }
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-      // Handle error (e.g., show a message to the user)
-    }
-  }
 });
+
+// Function to load user profile data
+async function loadUserProfile(userId) {
+  try {
+    console.log('Loading profile for user:', userId);
+    
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching profile:', error);
+      throw error;
+    }
+    
+    if (profile) {
+      console.log('Profile loaded successfully:', profile);
+      
+      // Update profile elements
+      document.querySelectorAll('#profileUsername, #detailUsername').forEach(element => {
+        if (element) element.textContent = profile.username;
+      });
+      
+      if (document.getElementById('detailEmail')) {
+        document.getElementById('detailEmail').textContent = profile.email || '-';
+      }
+      
+      if (document.getElementById('detailRole')) {
+        document.getElementById('detailRole').textContent = profile.role === 'admin' ? 'Admin' : 
+                                                           profile.role === 'vip' ? 'VIP' : 'Regular';
+      }
+      
+      if (document.getElementById('userRole')) {
+        document.getElementById('userRole').textContent = profile.role === 'admin' ? 'Admin' : 
+                                                         profile.role === 'vip' ? 'VIP' : 'Regular';
+        document.getElementById('userRole').className = 'user-role ' + profile.role;
+      }
+      
+      if (document.getElementById('detailJoined')) {
+        const createdDate = new Date(profile.created_at).toLocaleDateString('id-ID');
+        document.getElementById('detailJoined').textContent = createdDate;
+      }
+      
+      // Show/hide VIP cards based on role
+      const regularUserCard = document.getElementById('regularUserCard');
+      const vipUserCard = document.getElementById('vipUserCard');
+      
+      if (profile.role === 'vip' || profile.role === 'admin') {
+        if (regularUserCard) regularUserCard.style.display = 'none';
+        if (vipUserCard) vipUserCard.style.display = 'block';
+      } else {
+        if (regularUserCard) regularUserCard.style.display = 'block';
+        if (vipUserCard) vipUserCard.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+    // Handle error (e.g., show a message to the user)
+  }
+}

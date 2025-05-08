@@ -1,5 +1,7 @@
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  console.log('Donghua page loaded');
+  
   // Mobile menu toggle
   const menuToggle = document.querySelector('.menu-toggle');
   const navMenu = document.querySelector('.nav-menu');
@@ -10,78 +12,51 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Update navigation based on auth status
-  updateNavigation();
+  // Check authentication status and update navigation
+  await updateNavigation();
   
   // Load donghua details
   loadDonghuaDetails();
 });
 
-// Function to update navigation (same as in main.js)
+// Function to update navigation based on auth status
 async function updateNavigation() {
   try {
     const { data } = await supabase.auth.getSession();
     const isAuthenticated = !!data.session;
     
-    const navMenu = document.querySelector('.nav-menu');
-    if (!navMenu) return;
-    
-    // Get current navigation items
-    const currentNavItems = Array.from(navMenu.querySelectorAll('li a'));
-    const hasLoginLink = currentNavItems.some(link => link.href.includes('login.html'));
-    const hasUserLink = currentNavItems.some(link => link.href.includes('user.html'));
-    const hasAdminLink = currentNavItems.some(link => link.href.includes('admin.html'));
+    const loginBtn = document.getElementById('loginBtn');
+    const profileLinks = document.querySelectorAll('.profile-link');
+    const adminLink = document.getElementById('adminLink');
     
     if (isAuthenticated) {
       // User is logged in
-      const role = localStorage.getItem('role') || 'user';
+      console.log('User is logged in, updating nav');
+      if (loginBtn) loginBtn.style.display = 'none';
       
-      // Remove login link if it exists
-      if (hasLoginLink) {
-        const loginItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
-          li.querySelector('a')?.href.includes('login.html')
-        );
-        if (loginItem) loginItem.remove();
-      }
+      // Show profile links
+      profileLinks.forEach(link => {
+        if (link) link.style.display = 'inline-block';
+      });
       
-      // Add user link if it doesn't exist
-      if (!hasUserLink) {
-        const userItem = document.createElement('li');
-        userItem.innerHTML = `<a href="user.html">Akun</a>`;
-        navMenu.appendChild(userItem);
-      }
-      
-      // Add admin link if admin and doesn't exist
-      if (role === 'admin' && !hasAdminLink) {
-        const adminItem = document.createElement('li');
-        adminItem.innerHTML = `<a href="admin.html">Admin</a>`;
-        navMenu.appendChild(adminItem);
+      // Check if user is admin and show admin link
+      const userRole = localStorage.getItem('role');
+      if (adminLink && userRole === 'admin') {
+        adminLink.style.display = 'inline-block';
+      } else if (adminLink) {
+        adminLink.style.display = 'none';
       }
     } else {
       // User is not logged in
+      console.log('User is not logged in, updating nav');
+      if (loginBtn) loginBtn.style.display = 'inline-block';
       
-      // Add login link if it doesn't exist
-      if (!hasLoginLink) {
-        const loginItem = document.createElement('li');
-        loginItem.innerHTML = `<a href="login.html">Masuk</a>`;
-        navMenu.appendChild(loginItem);
-      }
+      // Hide profile and admin links
+      profileLinks.forEach(link => {
+        if (link) link.style.display = 'none';
+      });
       
-      // Remove user link if it exists
-      if (hasUserLink) {
-        const userItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
-          li.querySelector('a')?.href.includes('user.html')
-        );
-        if (userItem) userItem.remove();
-      }
-      
-      // Remove admin link if it exists
-      if (hasAdminLink) {
-        const adminItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
-          li.querySelector('a')?.href.includes('admin.html')
-        );
-        if (adminItem) adminItem.remove();
-      }
+      if (adminLink) adminLink.style.display = 'none';
     }
   } catch (error) {
     console.error('Error updating navigation:', error);
@@ -99,8 +74,11 @@ function getUrlParameter(name) {
 // Function to load donghua details from Supabase
 async function loadDonghuaDetails() {
   const donghuaId = getUrlParameter('id');
+  console.log('Loading donghua with ID:', donghuaId);
+  
   if (!donghuaId) {
-    window.location.href = 'index.html';
+    console.log('No donghua ID found, loading donghua list');
+    loadDonghuaList();
     return;
   }
 
@@ -115,12 +93,18 @@ async function loadDonghuaDetails() {
       .eq('id', donghuaId)
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching donghua:', error);
+      throw error;
+    }
     
     if (!donghua) {
-      window.location.href = 'index.html';
+      console.error('No donghua found with ID:', donghuaId);
+      document.getElementById('donghuaBackdrop').innerHTML = '<p class="error-message">Donghua tidak ditemukan</p>';
       return;
     }
+
+    console.log('Donghua data loaded:', donghua);
 
     // Update page title
     document.title = `${donghua.title} - Zenith Donghua`;
@@ -156,6 +140,66 @@ async function loadDonghuaDetails() {
   }
 }
 
+// Function to load donghua list when no ID is provided
+async function loadDonghuaList() {
+  const mainContent = document.querySelector('main');
+  if (!mainContent) return;
+  
+  // Create donghua list container
+  mainContent.innerHTML = `
+    <section class="donghua-list-section">
+      <h1 class="section-title">Daftar Donghua</h1>
+      <div class="donghua-grid" id="donghuaListGrid">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </section>
+  `;
+  
+  try {
+    // Fetch all donghua from Supabase
+    const { data: donghuaList, error } = await supabase
+      .from('donghua')
+      .select('*')
+      .order('title', { ascending: true });
+      
+    if (error) throw error;
+    
+    const donghuaGrid = document.getElementById('donghuaListGrid');
+    donghuaGrid.innerHTML = '';
+    
+    if (donghuaList.length === 0) {
+      donghuaGrid.innerHTML = '<p class="empty-message">Belum ada donghua tersedia.</p>';
+      return;
+    }
+    
+    // Create donghua cards
+    donghuaList.forEach(donghua => {
+      const donghuaCard = document.createElement('a');
+      donghuaCard.href = `donghua.html?id=${donghua.id}`;
+      donghuaCard.className = 'donghua-card';
+      donghuaCard.innerHTML = `
+        <div class="donghua-poster">
+          <img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">
+        </div>
+        <div class="donghua-info">
+          <h3 class="donghua-title">${donghua.title}</h3>
+          <div class="donghua-meta">
+            <span>${donghua.year}</span>
+            <span>${donghua.status}</span>
+          </div>
+          <div class="donghua-rating">
+            <i class="fas fa-star"></i> ${donghua.rating}
+          </div>
+        </div>
+      `;
+      donghuaGrid.appendChild(donghuaCard);
+    });
+  } catch (error) {
+    console.error('Error loading donghua list:', error);
+    document.getElementById('donghuaListGrid').innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+  }
+}
+
 // Function to load episodes from Supabase
 async function loadEpisodes(donghuaId) {
   const episodesList = document.getElementById('episodeList');
@@ -173,6 +217,8 @@ async function loadEpisodes(donghuaId) {
       .order('episode_number', { ascending: true });
       
     if (error) throw error;
+    
+    console.log('Episodes data loaded:', episodes);
 
     // Clear the episodes list before adding new items
     episodesList.innerHTML = '';

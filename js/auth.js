@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Auth.js loaded");
   
@@ -160,19 +161,46 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check if user is already logged in
   const checkAuthStatus = async () => {
     console.log("Checking auth status...");
-    const { data } = await supabase.auth.getSession();
-    
-    if (data.session) {
-      console.log("User is logged in, session:", data.session);
-      // If on login page and already logged in, redirect to home
-      if (window.location.pathname.includes('login.html')) {
-        window.location.href = 'index.html';
-      }
+    try {
+      const { data } = await supabase.auth.getSession();
       
-      // Update UI elements based on auth status
-      updateAuthUI(true);
-    } else {
-      console.log("No active session found");
+      if (data.session) {
+        console.log("User is logged in, session:", data.session);
+        // Store essential auth data in localStorage for easier access
+        localStorage.setItem('auth', 'true');
+        localStorage.setItem('userId', data.session.user.id);
+        
+        // Fetch profile data to get username and role
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('username, role')
+          .eq('id', data.session.user.id)
+          .single();
+          
+        if (profileData) {
+          localStorage.setItem('username', profileData.username);
+          localStorage.setItem('role', profileData.role || 'user');
+          console.log("User profile loaded:", profileData);
+        }
+        
+        // If on login page and already logged in, redirect to home
+        if (window.location.pathname.includes('login.html')) {
+          window.location.href = 'index.html';
+        }
+        
+        // Update UI elements based on auth status
+        updateAuthUI(true);
+      } else {
+        console.log("No active session found");
+        // Clear localStorage auth data
+        localStorage.removeItem('auth');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('role');
+        updateAuthUI(false);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
       updateAuthUI(false);
     }
   };
@@ -181,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateAuthUI(isLoggedIn) {
     console.log("Updating UI based on login status:", isLoggedIn);
     const loginBtn = document.getElementById('loginBtn');
-    const profileLink = document.querySelectorAll('.profile-link');
+    const profileLinks = document.querySelectorAll('.profile-link');
     const adminLink = document.getElementById('adminLink');
     
     if (isLoggedIn) {
@@ -189,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (loginBtn) loginBtn.style.display = 'none';
       
       // Show profile links
-      profileLink.forEach(link => {
+      profileLinks.forEach(link => {
         if (link) link.style.display = 'inline-block';
       });
       
@@ -206,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (loginBtn) loginBtn.style.display = 'inline-block';
       
       // Hide profile and admin links
-      profileLink.forEach(link => {
+      profileLinks.forEach(link => {
         if (link) link.style.display = 'none';
       });
       
