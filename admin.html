@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -10,8 +11,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const supabaseClient = window.supabase;
+    console.log('Supabase JS loaded on admin page');
   </script>
   <script src="js/supabase-config.js"></script>
+  <script>
+    // Add additional debugging 
+    console.log('Admin page loaded');
+    window.addEventListener('load', function() {
+      console.log('Admin page fully loaded');
+      console.log('Supabase object availability on admin page:', 
+                 typeof supabase !== 'undefined' ? "Available" : "Not available");
+    });
+  </script>
 </head>
 <body>
   <div class="admin-container">
