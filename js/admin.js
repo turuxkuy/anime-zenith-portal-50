@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   setupDonghuaForm();
   setupEpisodeForm();
   setupUserForm();
+  
+  // Debug Supabase
+  console.log('Supabase client initialized:', !!supabase);
 });
 
 // Initialize admin panel events
@@ -431,7 +434,12 @@ function setupDonghuaForm() {
   const posterUrlInput = document.getElementById('posterUrl');
   const backdropUrlInput = document.getElementById('backdropUrl');
   
-  if (!form || !posterUrlInput || !backdropUrlInput) return;
+  if (!form || !posterUrlInput || !backdropUrlInput) {
+    console.error('Donghua form elements not found!');
+    return;
+  }
+  
+  console.log('Setting up donghua form');
   
   // Preview poster image when URL is entered
   posterUrlInput.addEventListener('change', function() {
@@ -460,56 +468,64 @@ function setupDonghuaForm() {
   // Handle form submission
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
+    console.log('Donghua form submitted');
     
     const submitButton = form.querySelector('.submit-button');
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
     
-    const title = document.getElementById('title').value;
-    const year = parseInt(document.getElementById('year').value);
-    const genre = document.getElementById('genre').value;
-    const status = document.getElementById('status').value;
-    const rating = parseFloat(document.getElementById('rating').value);
-    const synopsis = document.getElementById('synopsis').value;
-    const poster_url = document.getElementById('posterUrl').value;
-    const backdrop_url = document.getElementById('backdropUrl').value;
-    
-    // Create donghua object
-    let donghua = {
-      title,
-      year,
-      genre,
-      status,
-      rating,
-      synopsis,
-      poster_url,
-      backdrop_url
-    };
-    
     try {
+      const title = document.getElementById('title').value;
+      const year = parseInt(document.getElementById('year').value);
+      const genre = document.getElementById('genre').value;
+      const status = document.getElementById('status').value;
+      const rating = parseFloat(document.getElementById('rating').value);
+      const synopsis = document.getElementById('synopsis').value;
+      const poster_url = document.getElementById('posterUrl').value;
+      const backdrop_url = document.getElementById('backdropUrl').value;
+      
+      console.log('Form data:', { title, year, genre, status, rating, synopsis, poster_url, backdrop_url });
+    
+      // Create donghua object
+      let donghua = {
+        title,
+        year,
+        genre,
+        status,
+        rating,
+        synopsis,
+        poster_url,
+        backdrop_url
+      };
+      
       // Check if editing existing donghua
       const editId = form.getAttribute('data-id');
       
       let result;
       if (editId) {
         // Update existing donghua
-        const { error } = await supabase
+        console.log('Updating donghua with ID:', editId);
+        const { data, error } = await supabase
           .from('donghua')
           .update(donghua)
-          .eq('id', editId);
+          .eq('id', editId)
+          .select();
           
         if (error) throw error;
+        console.log('Update result:', data);
         
         showToast('Donghua berhasil diperbarui!', 'success');
-        result = { success: true };
+        result = { success: true, data };
       } else {
         // Add new donghua
+        console.log('Inserting new donghua');
         const { data, error } = await supabase
           .from('donghua')
           .insert(donghua)
           .select();
           
         if (error) throw error;
+        console.log('Insert result:', data);
         
         showToast('Donghua baru berhasil ditambahkan!', 'success');
         result = { success: true, data };
@@ -536,7 +552,12 @@ function setupEpisodeForm() {
   const form = document.getElementById('episodeForm');
   const thumbnailUrlInput = document.getElementById('thumbnailUrl');
   
-  if (!form || !thumbnailUrlInput) return;
+  if (!form || !thumbnailUrlInput) {
+    console.error('Episode form elements not found!');
+    return;
+  }
+  
+  console.log('Setting up episode form');
   
   // Preview thumbnail image when URL is entered
   thumbnailUrlInput.addEventListener('change', function() {
@@ -556,42 +577,45 @@ function setupEpisodeForm() {
   // Handle form submission
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
+    console.log('Episode form submitted');
     
     const submitButton = form.querySelector('.submit-button');
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
     
-    const donghuaId = parseInt(document.getElementById('donghuaSelect').value);
-    const episodeNumber = parseInt(document.getElementById('episodeNumber').value);
-    const title = document.getElementById('episodeTitle').value;
-    const description = document.getElementById('episodeDescription').value;
-    const duration = parseInt(document.getElementById('episodeDuration').value);
-    const isVip = document.getElementById('isVip').value === 'true';
-    const thumbnail_url = document.getElementById('thumbnailUrl').value;
-    const video_url = document.getElementById('videoUrl').value;
-    
-    // Generate UUID for new episode (if needed)
-    const generateUUID = () => {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-    };
-    
-    // Create episode object
-    let episode = {
-      donghua_id: donghuaId,
-      episode_number: episodeNumber,
-      title,
-      description,
-      duration,
-      is_vip: isVip,
-      thumbnail_url,
-      video_url,
-      release_date: new Date().toISOString().split('T')[0]
-    };
-    
     try {
+      const donghuaId = parseInt(document.getElementById('donghuaSelect').value);
+      const episodeNumber = parseInt(document.getElementById('episodeNumber').value);
+      const title = document.getElementById('episodeTitle').value;
+      const description = document.getElementById('episodeDescription').value;
+      const duration = parseInt(document.getElementById('episodeDuration').value);
+      const isVip = document.getElementById('isVip').value === 'true';
+      const thumbnail_url = document.getElementById('thumbnailUrl').value;
+      const video_url = document.getElementById('videoUrl').value;
+      
+      console.log('Form data:', { donghuaId, episodeNumber, title, description, duration, isVip, thumbnail_url, video_url });
+    
+      // Generate UUID for new episode (if needed)
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      
+      // Create episode object
+      let episode = {
+        donghua_id: donghuaId,
+        episode_number: episodeNumber,
+        title,
+        description,
+        duration,
+        is_vip: isVip,
+        thumbnail_url,
+        video_url,
+        release_date: new Date().toISOString().split('T')[0]
+      };
+      
       // Check if editing existing episode or adding new one
       const editId = form.getAttribute('data-id');
       const episodeId = editId || generateUUID();
@@ -602,24 +626,32 @@ function setupEpisodeForm() {
         episode.id = episodeId;
       }
       
-      // If editing, get current episode data for any missing values
+      console.log('Episode object to save:', episode);
+      
+      // Save to Supabase
       if (editId) {
         // Update existing episode
-        const { error } = await supabase
+        console.log('Updating episode with ID:', editId);
+        const { data, error } = await supabase
           .from('episodes')
           .update(episode)
-          .eq('id', editId);
+          .eq('id', editId)
+          .select();
           
         if (error) throw error;
+        console.log('Update result:', data);
         
         showToast('Episode berhasil diperbarui!', 'success');
       } else {
         // Add new episode
-        const { error } = await supabase
+        console.log('Inserting new episode with ID:', episodeId);
+        const { data, error } = await supabase
           .from('episodes')
-          .insert(episode);
+          .insert(episode)
+          .select();
           
         if (error) throw error;
+        console.log('Insert result:', data);
         
         showToast('Episode baru berhasil ditambahkan!', 'success');
       }
@@ -987,7 +1019,12 @@ function isValidUrl(string) {
 function showToast(message, type = 'info') {
   const toastContainer = document.getElementById('toastContainer');
   
-  if (!toastContainer) return;
+  if (!toastContainer) {
+    console.error('Toast container not found!');
+    return;
+  }
+  
+  console.log('Showing toast:', message, type);
   
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
