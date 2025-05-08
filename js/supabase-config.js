@@ -8,6 +8,7 @@ const supabase = supabaseClient.createClient(supabaseUrl, supabaseAnonKey);
 
 // Log initialization to help with debugging
 console.log('Supabase client initialized with URL:', supabaseUrl);
+console.log('Supabase client object:', supabase ? 'Created successfully' : 'Failed to create');
 
 // Function to check if logged in - can be used across pages
 async function checkLoginStatus() {
