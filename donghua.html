@@ -32,18 +32,18 @@
   <main>
     <section class="donghua-detail">
       <div class="donghua-backdrop" id="donghuaBackdrop">
-        <!-- Background image will be loaded via JS -->
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
       </div>
       <div class="donghua-info">
         <div class="donghua-poster" id="donghuaPoster">
-          <!-- Poster image will be loaded via JS -->
+          <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
         </div>
         <div class="donghua-content">
           <h1 id="donghuaTitle">Memuat...</h1>
           <div class="donghua-meta">
-            <span id="donghuaYear">Tahun</span>
-            <span id="donghuaGenre">Genre</span>
-            <span id="donghuaStatus">Status</span>
+            <span id="donghuaYear">Memuat...</span>
+            <span id="donghuaGenre">Memuat...</span>
+            <span id="donghuaStatus">Memuat...</span>
           </div>
           <div class="donghua-rating">
             <i class="fas fa-star"></i>
@@ -59,7 +59,7 @@
       <div class="episode-section">
         <h2>Daftar Episode</h2>
         <div class="episode-list" id="episodeList">
-          <!-- Episodes will be loaded here via JavaScript -->
+          <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
         </div>
       </div>
     </section>
@@ -92,6 +92,24 @@
       <p>&copy; 2025 ZenithDonghua. Hak Cipta Dilindungi.</p>
     </div>
   </footer>
+
+  <script>
+    // Add more detailed debugging for donghua page
+    console.log("Donghua page HTML loaded");
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("DOM fully loaded on donghua page");
+      console.log("Current URL:", window.location.href);
+      console.log("URL search params:", window.location.search);
+      
+      // Check if Supabase is available
+      if (typeof supabase === 'undefined') {
+        console.error("Supabase client NOT available on donghua page!");
+      } else {
+        console.log("Supabase client loaded and available on donghua page");
+      }
+    });
+  </script>
 
   <script src="js/donghua.js"></script>
   <script src="js/auth.js"></script>

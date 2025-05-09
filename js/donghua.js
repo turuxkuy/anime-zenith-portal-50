@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Donghua page loaded');
   
@@ -63,11 +62,12 @@ async function updateNavigation() {
   }
 }
 
-// Function to get URL parameters
+// Function to get URL parameters - improved to handle edge cases
 function getUrlParameter(name) {
   name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
   const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
   const results = regex.exec(location.search);
+  console.log(`Getting URL parameter '${name}': ${results === null ? 'not found' : results[1]}`);
   return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 
@@ -87,6 +87,7 @@ async function loadDonghuaDetails() {
     document.getElementById('donghuaBackdrop').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
     // Fetch donghua data from Supabase
+    console.log('Fetching donghua with ID:', donghuaId);
     const { data: donghua, error } = await supabase
       .from('donghua')
       .select('*')
@@ -97,6 +98,8 @@ async function loadDonghuaDetails() {
       console.error('Error fetching donghua:', error);
       throw error;
     }
+    
+    console.log('Donghua data fetched:', donghua);
     
     if (!donghua) {
       console.error('No donghua found with ID:', donghuaId);
@@ -125,18 +128,22 @@ async function loadDonghuaDetails() {
     }
 
     // Set donghua details
-    document.getElementById('donghuaTitle').textContent = donghua.title;
-    document.getElementById('donghuaYear').textContent = donghua.year;
-    document.getElementById('donghuaGenre').textContent = donghua.genre;
-    document.getElementById('donghuaStatus').textContent = donghua.status;
-    document.getElementById('donghuaRating').textContent = donghua.rating;
-    document.getElementById('donghuaSynopsis').textContent = donghua.synopsis;
+    document.getElementById('donghuaTitle').textContent = donghua.title || 'Judul Tidak Tersedia';
+    document.getElementById('donghuaYear').textContent = donghua.year || 'Tahun Tidak Tersedia';
+    document.getElementById('donghuaGenre').textContent = donghua.genre || 'Genre Tidak Tersedia';
+    document.getElementById('donghuaStatus').textContent = donghua.status || 'Status Tidak Tersedia';
+    document.getElementById('donghuaRating').textContent = donghua.rating || '0.0';
+    document.getElementById('donghuaSynopsis').textContent = donghua.synopsis || 'Sinopsis tidak tersedia';
 
     // Load episodes for this donghua
     loadEpisodes(donghuaId);
   } catch (error) {
     console.error('Error loading donghua details:', error);
     document.getElementById('donghuaBackdrop').innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    
+    // Also update other elements to show error state
+    document.getElementById('donghuaTitle').textContent = 'Error';
+    document.getElementById('donghuaSynopsis').textContent = 'Terjadi kesalahan saat memuat data donghua. Silakan coba lagi nanti.';
   }
 }
 
@@ -211,6 +218,7 @@ async function loadEpisodes(donghuaId) {
     // Show loading state
     episodesList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
+    console.log('Fetching episodes for donghua ID:', donghuaId);
     // Fetch episodes data from Supabase
     const { data: episodes, error } = await supabase
       .from('episodes')
@@ -218,7 +226,10 @@ async function loadEpisodes(donghuaId) {
       .eq('donghua_id', donghuaId)
       .order('episode_number', { ascending: true });
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching episodes:', error);
+      throw error;
+    }
     
     console.log('Episodes data loaded:', episodes);
 
