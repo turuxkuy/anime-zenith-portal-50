@@ -105,6 +105,8 @@ async function loadDonghuaList() {
       
     if (error) throw error;
     
+    console.log('Fetched donghua data:', donghuaData);
+    
     // Clear the grid before adding new items
     donghuaGrid.innerHTML = '';
     
@@ -118,6 +120,7 @@ async function loadDonghuaList() {
       const donghuaCard = document.createElement('a');
       donghuaCard.href = `donghua.html?id=${donghua.id}`;
       donghuaCard.className = 'donghua-card';
+      donghuaCard.setAttribute('data-donghua-id', donghua.id);
       donghuaCard.innerHTML = `
         <img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">
         <div class="donghua-overlay">
@@ -129,6 +132,13 @@ async function loadDonghuaList() {
           </div>
         </div>
       `;
+      
+      // Add click event listener to ensure the link works properly
+      donghuaCard.addEventListener('click', function(e) {
+        console.log(`Clicked on donghua card: ${donghua.id} - ${donghua.title}`);
+        window.location.href = this.href;
+      });
+      
       donghuaGrid.appendChild(donghuaCard);
     });
   } catch (error) {

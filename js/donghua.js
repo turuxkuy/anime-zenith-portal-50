@@ -172,6 +172,8 @@ async function loadDonghuaList() {
       return;
     }
     
+    console.log('Donghua list loaded:', donghuaList.length, 'items');
+    
     // Create donghua cards
     donghuaList.forEach(donghua => {
       const donghuaCard = document.createElement('a');
