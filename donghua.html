@@ -107,6 +107,9 @@
         console.error("Supabase client NOT available on donghua page!");
       } else {
         console.log("Supabase client loaded and available on donghua page");
+        
+        // Log Supabase configuration for debugging
+        console.log("Supabase URL is correctly set:", supabaseUrl ? "Yes" : "No");
       }
     });
   </script>

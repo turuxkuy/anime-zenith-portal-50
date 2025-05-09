@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Donghua page loaded');
   
@@ -85,6 +86,12 @@ async function loadDonghuaDetails() {
   try {
     // Show loading state
     document.getElementById('donghuaBackdrop').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+    document.getElementById('donghuaTitle').textContent = 'Memuat...';
+    document.getElementById('donghuaYear').textContent = 'Memuat...';
+    document.getElementById('donghuaGenre').textContent = 'Memuat...';
+    document.getElementById('donghuaStatus').textContent = 'Memuat...';
+    document.getElementById('donghuaSynopsis').textContent = 'Memuat sinopsis...';
+    document.getElementById('episodeList').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
     // Fetch donghua data from Supabase
     console.log('Fetching donghua with ID:', donghuaId);
@@ -104,10 +111,10 @@ async function loadDonghuaDetails() {
     if (!donghua) {
       console.error('No donghua found with ID:', donghuaId);
       document.getElementById('donghuaBackdrop').innerHTML = '<p class="error-message">Donghua tidak ditemukan</p>';
+      document.getElementById('donghuaTitle').textContent = 'Donghua tidak ditemukan';
+      document.getElementById('donghuaSynopsis').textContent = 'Donghua dengan ID tersebut tidak ditemukan dalam database.';
       return;
     }
-
-    console.log('Donghua data loaded:', donghua);
 
     // Update page title
     document.title = `${donghua.title} - Zenith Donghua`;
@@ -139,11 +146,25 @@ async function loadDonghuaDetails() {
     loadEpisodes(donghuaId);
   } catch (error) {
     console.error('Error loading donghua details:', error);
-    document.getElementById('donghuaBackdrop').innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    document.getElementById('donghuaTitle').textContent = 'Error';
+    document.getElementById('donghuaSynopsis').textContent = `Terjadi kesalahan saat memuat data donghua: ${error.message || 'Tidak dapat terhubung ke database'}`;
     
     // Also update other elements to show error state
-    document.getElementById('donghuaTitle').textContent = 'Error';
-    document.getElementById('donghuaSynopsis').textContent = 'Terjadi kesalahan saat memuat data donghua. Silakan coba lagi nanti.';
+    document.getElementById('donghuaYear').textContent = '-';
+    document.getElementById('donghuaGenre').textContent = '-';
+    document.getElementById('donghuaStatus').textContent = '-';
+    document.getElementById('donghuaRating').textContent = '0.0';
+    
+    // Clear loading spinners
+    const backdropElement = document.getElementById('donghuaBackdrop');
+    if (backdropElement) {
+      backdropElement.innerHTML = `<p class="error-message">Error: ${error.message || 'Tidak dapat memuat data'}</p>`;
+    }
+    
+    const posterElement = document.getElementById('donghuaPoster');
+    if (posterElement) {
+      posterElement.innerHTML = '<div class="error-poster"><i class="fas fa-exclamation-triangle"></i></div>';
+    }
   }
 }
 
