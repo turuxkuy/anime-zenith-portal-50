@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Make sure supabaseClient is defined globally
+    const supabaseClient = window.supabase;
+    console.log("Supabase JS loaded on donghua page");
+  </script>
   <script src="js/supabase-config.js"></script>
 </head>
 <body>
@@ -93,10 +98,13 @@
     </div>
   </footer>
 
+  <!-- IMPORTANT: Load auth.js first to ensure authentication is ready -->
+  <script src="js/auth.js"></script>
+  <!-- Then load donghua.js which depends on authentication being ready -->
+  <script src="js/donghua.js"></script>
+  
   <script>
-    // Add more detailed debugging for donghua page
-    console.log("Donghua page HTML loaded");
-    
+    // Add debugging code after all scripts are loaded
     document.addEventListener('DOMContentLoaded', function() {
       console.log("DOM fully loaded on donghua page");
       console.log("Current URL:", window.location.href);
@@ -104,7 +112,9 @@
       
       // Check if Supabase is available
       if (typeof supabase === 'undefined') {
-        console.error("Supabase client NOT available on donghua page!");
+        console.error("CRITICAL ERROR: Supabase client NOT available on donghua page!");
+        document.getElementById('donghuaTitle').textContent = 'Error';
+        document.getElementById('donghuaSynopsis').textContent = 'Terjadi kesalahan saat memuat data donghua: supabase is not defined';
       } else {
         console.log("Supabase client loaded and available on donghua page");
         
@@ -125,8 +135,5 @@
       }
     });
   </script>
-
-  <script src="js/donghua.js"></script>
-  <script src="js/auth.js"></script>
 </body>
 </html>

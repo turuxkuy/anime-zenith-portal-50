@@ -2,6 +2,15 @@
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Donghua page loaded');
   
+  // Check if supabase exists immediately
+  if (typeof supabase === 'undefined') {
+    console.error('CRITICAL ERROR: Supabase is not defined in donghua.js');
+    document.getElementById('donghuaBackdrop').innerHTML = '<p class="error-message">Terjadi kesalahan: Supabase tidak terdeteksi</p>';
+    document.getElementById('donghuaTitle').textContent = 'Error';
+    document.getElementById('donghuaSynopsis').textContent = 'Terjadi kesalahan saat memuat data donghua: supabase is not defined';
+    return; // Exit early if supabase is not available
+  }
+  
   // Mobile menu toggle
   const menuToggle = document.querySelector('.menu-toggle');
   const navMenu = document.querySelector('.nav-menu');
@@ -22,6 +31,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Function to update navigation based on auth status
 async function updateNavigation() {
   try {
+    if (typeof supabase === 'undefined') {
+      console.error('Supabase is not defined in updateNavigation');
+      return;
+    }
+    
     const { data } = await supabase.auth.getSession();
     const isAuthenticated = !!data.session;
     
@@ -84,6 +98,11 @@ async function loadDonghuaDetails() {
   }
 
   try {
+    // Check supabase again to be extra sure
+    if (typeof supabase === 'undefined') {
+      throw new Error("Supabase client not initialized");
+    }
+    
     // Show loading state
     document.getElementById('donghuaBackdrop').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     document.getElementById('donghuaTitle').textContent = 'Memuat...';
@@ -92,14 +111,9 @@ async function loadDonghuaDetails() {
     document.getElementById('donghuaStatus').textContent = 'Memuat...';
     document.getElementById('donghuaSynopsis').textContent = 'Memuat sinopsis...';
     document.getElementById('episodeList').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
-    
-    // Check Supabase client
-    if (!supabase) {
-      throw new Error("Supabase client not initialized");
-    }
 
     // Fetch donghua data from Supabase with extensive logging
-    console.log('Supabase client:', supabase ? 'Available' : 'Not available');
+    console.log('Supabase client:', typeof supabase);
     console.log('Fetching donghua with ID:', donghuaId, 'Type:', typeof donghuaId);
     
     // Convert to number for comparison if it's a string that contains a number
