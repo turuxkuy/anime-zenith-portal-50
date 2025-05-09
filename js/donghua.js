@@ -93,12 +93,23 @@ async function loadDonghuaDetails() {
     document.getElementById('donghuaSynopsis').textContent = 'Memuat sinopsis...';
     document.getElementById('episodeList').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
-    // Fetch donghua data from Supabase
-    console.log('Fetching donghua with ID:', donghuaId);
+    // Check Supabase client
+    if (!supabase) {
+      throw new Error("Supabase client not initialized");
+    }
+
+    // Fetch donghua data from Supabase with extensive logging
+    console.log('Supabase client:', supabase ? 'Available' : 'Not available');
+    console.log('Fetching donghua with ID:', donghuaId, 'Type:', typeof donghuaId);
+    
+    // Convert to number for comparison if it's a string that contains a number
+    const idToUse = isNaN(Number(donghuaId)) ? donghuaId : Number(donghuaId);
+    console.log('Using ID for query:', idToUse, 'Type:', typeof idToUse);
+    
     const { data: donghua, error } = await supabase
       .from('donghua')
       .select('*')
-      .eq('id', donghuaId)
+      .eq('id', idToUse)
       .single();
       
     if (error) {
@@ -240,11 +251,15 @@ async function loadEpisodes(donghuaId) {
     episodesList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
     console.log('Fetching episodes for donghua ID:', donghuaId);
+    
+    // Convert to number if it's a string that contains a number
+    const idToUse = isNaN(Number(donghuaId)) ? donghuaId : Number(donghuaId);
+    
     // Fetch episodes data from Supabase
     const { data: episodes, error } = await supabase
       .from('episodes')
       .select('*')
-      .eq('donghua_id', donghuaId)
+      .eq('donghua_id', idToUse)
       .order('episode_number', { ascending: true });
       
     if (error) {
