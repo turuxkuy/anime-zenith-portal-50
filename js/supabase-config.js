@@ -8,15 +8,7 @@ console.log("Initializing Supabase client...");
 
 try {
   // Create the Supabase client
-  if (typeof supabaseClient === 'undefined') {
-    console.log("Using default Supabase initialization");
-    // Create Supabase client directly
-    window.supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
-  } else {
-    console.log("Using supabaseClient for initialization");
-    // Create the client using provided supabaseClient
-    window.supabase = supabaseClient.createClient(supabaseUrl, supabaseAnonKey);
-  }
+  window.supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
   
   console.log('Supabase client initialized successfully');
   

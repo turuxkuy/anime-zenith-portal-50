@@ -1,3 +1,4 @@
+
 /* Admin Panel Styles */
 
 .admin-container {
@@ -403,6 +404,8 @@ progress::-webkit-progress-value {
   height: 100%;
   z-index: 1001;
   overflow-y: auto;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .modal-content {
@@ -413,8 +416,8 @@ progress::-webkit-progress-value {
   border-radius: var(--radius);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   max-width: 700px;
-  width: 90%;
-  max-height: 90vh;
+  width: 100%;
+  max-height: calc(100vh - 4rem);
   overflow-y: auto;
 }
 
@@ -425,6 +428,7 @@ progress::-webkit-progress-value {
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--gray);
+  z-index: 10;
 }
 
 .close-modal:hover {
@@ -443,6 +447,7 @@ progress::-webkit-progress-value {
   transition: background-color 0.3s;
   width: 100%;
   margin-top: 1.5rem;
+  font-size: 1rem;
 }
 
 .submit-button:hover {
@@ -572,13 +577,30 @@ progress::-webkit-progress-value {
     padding: 1rem;
   }
 
+  .modal {
+    padding: 0;
+  }
+
   .modal-content {
     width: 95%;
     margin: 1rem auto;
     padding: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .action-bar {
     justify-content: center;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    font-size: 16px; /* Prevents iOS zoom on input fields */
+  }
+  
+  .submit-button {
+    padding: 1rem;
   }
 }

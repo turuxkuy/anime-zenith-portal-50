@@ -123,7 +123,7 @@ function initializeAdminPanel() {
 // Function to logout
 async function logout() {
   try {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await window.supabase.auth.signOut();
     if (error) throw error;
     window.location.href = 'login.html';
   } catch (error) {
@@ -166,19 +166,19 @@ function navigate(event) {
 // Function to load dashboard data
 async function loadDashboardData() {
   try {
-    const { count: totalDonghua } = await supabase
+    const { count: totalDonghua } = await window.supabase
       .from('donghua')
       .select('*', { count: 'exact', head: true });
 
-    const { count: totalEpisodes } = await supabase
+    const { count: totalEpisodes } = await window.supabase
       .from('episodes')
       .select('*', { count: 'exact', head: true });
 
-    const { count: totalUsers } = await supabase
+    const { count: totalUsers } = await window.supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    const { count: vipUsers } = await supabase
+    const { count: vipUsers } = await window.supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'vip');
@@ -199,7 +199,7 @@ async function loadDonghuaList() {
   if (!donghuaTableBody) return;
 
   try {
-    const { data: donghuaData, error } = await supabase
+    const { data: donghuaData, error } = await window.supabase
       .from('donghua')
       .select('*')
       .order('title', { ascending: true });
@@ -234,7 +234,7 @@ async function loadEpisodeList() {
   if (!episodeTableBody) return;
 
   try {
-    const { data: episodes, error } = await supabase
+    const { data: episodes, error } = await window.supabase
       .from('episodes')
       .select('*, donghua(title)')
       .order('episode_number', { ascending: true });
@@ -245,14 +245,16 @@ async function loadEpisodeList() {
     episodes.forEach(episode => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td><img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="${episode.title}" width="50"></td>
+        <td><div class="table-thumbnail"><img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="${episode.title}" width="50"></div></td>
         <td>${episode.donghua?.title || 'Unknown'}</td>
         <td>${episode.episode_number}</td>
         <td>${episode.title}</td>
-        <td>${episode.is_vip ? 'VIP' : 'Umum'}</td>
+        <td><span class="status-badge ${episode.is_vip ? 'status-vip' : 'status-free'}">${episode.is_vip ? 'VIP' : 'Umum'}</span></td>
         <td>
-          <button class="edit-button" data-id="${episode.id}" onclick="openModal('episodeModal', 'edit', '${episode.id}')"><i class="fas fa-edit"></i></button>
-          <button class="delete-button" data-id="${episode.id}" onclick="deleteEpisode('${episode.id}')"><i class="fas fa-trash-alt"></i></button>
+          <div class="table-actions">
+            <button class="edit-btn" onclick="openModal('episodeModal', 'edit', '${episode.id}')"><i class="fas fa-edit"></i></button>
+            <button class="delete-btn" onclick="deleteEpisode('${episode.id}')"><i class="fas fa-trash-alt"></i></button>
+          </div>
         </td>
       `;
       episodeTableBody.appendChild(row);
@@ -269,7 +271,7 @@ async function loadUsersList() {
   if (!usersTableBody) return;
 
   try {
-    const { data: users, error } = await supabase
+    const { data: users, error } = await window.supabase
       .from('profiles')
       .select('id, username, email, role, created_at')
       .order('created_at', { ascending: false });
@@ -358,7 +360,7 @@ function closeModal(modalId) {
 // Function to populate donghua form for editing
 async function populateDonghuaForm(donghuaId) {
   try {
-    const { data: donghua, error } = await supabase
+    const { data: donghua, error } = await window.supabase
       .from('donghua')
       .select('*')
       .eq('id', donghuaId)
@@ -388,7 +390,7 @@ async function populateDonghuaForm(donghuaId) {
 // Function to populate episode form for editing
 async function populateEpisodeForm(episodeId) {
   try {
-    const { data: episode, error } = await supabase
+    const { data: episode, error } = await window.supabase
       .from('episodes')
       .select('*')
       .eq('id', episodeId)
@@ -423,7 +425,7 @@ async function populateEpisodeForm(episodeId) {
 // Function to populate user form for editing
 async function populateUserForm(userId) {
   try {
-    const { data: user, error } = await supabase
+    const { data: user, error } = await window.supabase
       .from('profiles')
       .select('id, username, email, role')
       .eq('id', userId)
@@ -475,7 +477,7 @@ async function handleDonghuaSubmit(event) {
       backdrop_url
     };
     
-    if (!supabase) {
+    if (!window.supabase) {
       console.error('Supabase client is not initialized!');
       showToast('Koneksi database gagal!', 'error');
       throw new Error('Database connection failed');
@@ -493,7 +495,7 @@ async function handleDonghuaSubmit(event) {
     if (editId) {
       // Update existing donghua
       console.log('Updating donghua with ID:', editId);
-      const { data, error } = await supabase
+      const { data, error } = await window.supabase
         .from('donghua')
         .update(donghua)
         .eq('id', editId)
@@ -513,7 +515,7 @@ async function handleDonghuaSubmit(event) {
     } else {
       // Insert new donghua
       console.log('Inserting new donghua');
-      const { data, error } = await supabase
+      const { data, error } = await window.supabase
         .from('donghua')
         .insert(donghua)
         .select();
@@ -547,7 +549,7 @@ async function handleEpisodeSubmit(event) {
     const episode_number = parseInt(form.querySelector('#episodeNumber').value);
     const title = form.querySelector('#episodeTitle').value;
     const description = form.querySelector('#episodeDescription').value;
-    const duration = parseInt(form.querySelector('#episodeDuration').value);
+    const duration = parseInt(form.querySelector('#episodeDuration').value) || null;
     const is_vip = form.querySelector('#isVip').value === 'true';
     const thumbnail_url = form.querySelector('#thumbnailUrl').value;
     const video_url = form.querySelector('#videoUrl').value;
@@ -587,7 +589,7 @@ async function handleEpisodeSubmit(event) {
     if (editId) {
       // Update existing episode
       console.log(`Updating episode with ID: ${editId}`);
-      const { data, error } = await supabase
+      const { data, error } = await window.supabase
         .from('episodes')
         .update(episode)
         .eq('id', editId)
@@ -604,7 +606,7 @@ async function handleEpisodeSubmit(event) {
     } else {
       // Insert new episode
       console.log("Inserting new episode");
-      const { data, error } = await supabase
+      const { data, error } = await window.supabase
         .from('episodes')
         .insert(episode)
         .select();
@@ -643,7 +645,7 @@ async function handleUserSubmit(event) {
     }
 
     // Update user role in profiles table
-    const { data, error } = await supabase
+    const { data, error } = await window.supabase
       .from('profiles')
       .update({ role: userRole })
       .eq('id', userId)
@@ -668,7 +670,7 @@ async function handleUserSubmit(event) {
 async function deleteDonghua(donghuaId) {
   if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
     try {
-      const { error } = await supabase
+      const { error } = await window.supabase
         .from('donghua')
         .delete()
         .eq('id', donghuaId);
@@ -688,7 +690,7 @@ async function deleteDonghua(donghuaId) {
 async function deleteEpisode(episodeId) {
   if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
     try {
-      const { error } = await supabase
+      const { error } = await window.supabase
         .from('episodes')
         .delete()
         .eq('id', episodeId);
@@ -711,7 +713,7 @@ async function loadDonghuaOptions() {
 
   try {
     console.log("Loading donghua options for select dropdown");
-    const { data: donghuaData, error } = await supabase
+    const { data: donghuaData, error } = await window.supabase
       .from('donghua')
       .select('id, title')
       .order('title', { ascending: true });
@@ -747,23 +749,37 @@ function previewImage(inputId, previewId) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
 
-  if (input.value) {
-    preview.innerHTML = `<img src="${input.value}" alt="Preview" width="100%">`;
-  } else {
-    preview.innerHTML = '';
+  if (input && preview) {
+    if (input.value) {
+      preview.innerHTML = `<img src="${input.value}" alt="Preview">`;
+    } else {
+      preview.innerHTML = '';
+    }
   }
 }
 
 // Function to show toast message
 function showToast(message, type = 'success') {
   const toastContainer = document.getElementById('toastContainer');
+  if (!toastContainer) return;
+  
   const toast = document.createElement('div');
   toast.classList.add('toast', type);
-  toast.textContent = message;
+  toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+  
   toastContainer.appendChild(toast);
-
+  
+  // Show toast with animation
   setTimeout(() => {
-    toast.remove();
+    toast.classList.add('show');
+  }, 10);
+
+  // Remove toast after 3 seconds
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
   }, 3000);
 }
 
@@ -771,9 +787,13 @@ function showToast(message, type = 'success') {
 async function checkAdminAuth() {
   try {
     console.log('Checking admin auth...');
-    console.log('Supabase object availability:', supabase ? "Available" : "Not available");
     
-    const { data } = await supabase.auth.getSession();
+    if (!window.supabase) {
+      console.error('Supabase client not available');
+      return false;
+    }
+    
+    const { data } = await window.supabase.auth.getSession();
     console.log('Auth session data:', data);
     
     if (!data.session) {
@@ -783,7 +803,7 @@ async function checkAdminAuth() {
     
     console.log('User ID from session:', data.session.user.id);
     
-    const { data: profileData, error } = await supabase
+    const { data: profileData, error } = await window.supabase
       .from('profiles')
       .select('role')
       .eq('id', data.session.user.id)
