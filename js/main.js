@@ -1,5 +1,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('Main.js loaded and executing');
+  
   // Mobile menu toggle
   const menuToggle = document.querySelector('.menu-toggle');
   const navMenu = document.querySelector('.nav-menu');
@@ -20,8 +22,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // Function to update navigation based on authentication
 async function updateNavigation() {
   try {
-    const { data } = await supabase.auth.getSession();
+    console.log('Updating navigation based on authentication status');
+    
+    // Check if supabase is defined
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase is not defined in updateNavigation');
+      return;
+    }
+    
+    const { data } = await window.supabase.auth.getSession();
     const isAuthenticated = !!data.session;
+    console.log('Authentication status:', isAuthenticated ? 'Logged in' : 'Not logged in');
     
     const navMenu = document.querySelector('.nav-menu');
     if (!navMenu) return;
@@ -91,44 +102,68 @@ async function updateNavigation() {
 // Function to load donghua list from Supabase
 async function loadDonghuaList() {
   const donghuaGrid = document.getElementById('donghuaGrid');
-  if (!donghuaGrid) return;
+  if (!donghuaGrid) {
+    console.error('donghuaGrid element not found');
+    return;
+  }
   
   try {
+    console.log('Loading donghua list...');
+    
     // Show loading state
     donghuaGrid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
     
+    // Check if supabase is defined
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase is not defined in loadDonghuaList');
+      donghuaGrid.innerHTML = '<p class="error-message">Terjadi kesalahan: Supabase tidak tersedia</p>';
+      return;
+    }
+    
     // Fetch donghua data from Supabase
-    const { data: donghuaData, error } = await supabase
+    console.log('Fetching donghua data from Supabase...');
+    const { data: donghuaData, error } = await window.supabase
       .from('donghua')
       .select('*')
       .order('title', { ascending: true });
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching donghua data:', error);
+      throw error;
+    }
     
     console.log('Fetched donghua data:', donghuaData);
     
     // Clear the grid before adding new items
     donghuaGrid.innerHTML = '';
     
-    if (donghuaData.length === 0) {
+    if (!donghuaData || donghuaData.length === 0) {
+      console.log('No donghua data available');
       donghuaGrid.innerHTML = '<p class="empty-message">Belum ada donghua tersedia.</p>';
       return;
     }
 
     // Create donghua cards for each item
     donghuaData.forEach((donghua) => {
+      console.log('Creating card for donghua:', donghua.title, 'with ID:', donghua.id);
+      
       const donghuaCard = document.createElement('a');
       donghuaCard.href = `donghua.html?id=${donghua.id}`;
       donghuaCard.className = 'donghua-card';
       donghuaCard.setAttribute('data-donghua-id', donghua.id);
+      
+      // Check if poster_url is available
+      const posterUrl = donghua.poster_url || 'images/default-poster.jpg';
+      console.log('Using poster URL:', posterUrl);
+      
       donghuaCard.innerHTML = `
-        <img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">
+        <img src="${posterUrl}" alt="${donghua.title}" onerror="this.src='images/default-poster.jpg';">
         <div class="donghua-overlay">
           <h3 class="donghua-title">${donghua.title}</h3>
           <div class="donghua-meta">
-            <span>${donghua.year}</span>
-            <span>${donghua.genre}</span>
-            <span>${donghua.status}</span>
+            <span>${donghua.year || 'Tahun tidak tersedia'}</span>
+            <span>${donghua.genre || 'Genre tidak tersedia'}</span>
+            <span>${donghua.status || 'Status tidak tersedia'}</span>
           </div>
         </div>
       `;
@@ -141,8 +176,12 @@ async function loadDonghuaList() {
       
       donghuaGrid.appendChild(donghuaCard);
     });
+    
+    console.log('Donghua list loaded successfully');
   } catch (error) {
     console.error('Error loading donghua list:', error);
-    donghuaGrid.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    if (donghuaGrid) {
+      donghuaGrid.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    }
   }
 }

@@ -3,12 +3,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   console.log('Donghua page loaded');
   
   // Check if supabase exists immediately
-  if (typeof supabase === 'undefined') {
+  if (typeof window.supabase === 'undefined') {
     console.error('CRITICAL ERROR: Supabase is not defined in donghua.js');
     document.getElementById('donghuaBackdrop').innerHTML = '<p class="error-message">Terjadi kesalahan: Supabase tidak terdeteksi</p>';
     document.getElementById('donghuaTitle').textContent = 'Error';
     document.getElementById('donghuaSynopsis').textContent = 'Terjadi kesalahan saat memuat data donghua: supabase is not defined';
     return; // Exit early if supabase is not available
+  } else {
+    console.log('Supabase is defined and available in donghua.js');
   }
   
   // Mobile menu toggle
@@ -31,12 +33,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Function to update navigation based on auth status
 async function updateNavigation() {
   try {
-    if (typeof supabase === 'undefined') {
+    if (typeof window.supabase === 'undefined') {
       console.error('Supabase is not defined in updateNavigation');
       return;
     }
     
-    const { data } = await supabase.auth.getSession();
+    const { data } = await window.supabase.auth.getSession();
     const isAuthenticated = !!data.session;
     
     const loginBtn = document.getElementById('loginBtn');
@@ -99,7 +101,7 @@ async function loadDonghuaDetails() {
 
   try {
     // Check supabase again to be extra sure
-    if (typeof supabase === 'undefined') {
+    if (typeof window.supabase === 'undefined') {
       throw new Error("Supabase client not initialized");
     }
     
@@ -113,14 +115,14 @@ async function loadDonghuaDetails() {
     document.getElementById('episodeList').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
 
     // Fetch donghua data from Supabase with extensive logging
-    console.log('Supabase client:', typeof supabase);
+    console.log('Supabase client:', typeof window.supabase);
     console.log('Fetching donghua with ID:', donghuaId, 'Type:', typeof donghuaId);
     
     // Convert to number for comparison if it's a string that contains a number
     const idToUse = isNaN(Number(donghuaId)) ? donghuaId : Number(donghuaId);
     console.log('Using ID for query:', idToUse, 'Type:', typeof idToUse);
     
-    const { data: donghua, error } = await supabase
+    const { data: donghua, error } = await window.supabase
       .from('donghua')
       .select('*')
       .eq('id', idToUse)
@@ -156,7 +158,7 @@ async function loadDonghuaDetails() {
     // Set poster image
     const posterElement = document.getElementById('donghuaPoster');
     if (posterElement) {
-      posterElement.innerHTML = `<img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">`;
+      posterElement.innerHTML = `<img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}" onerror="this.src='images/default-poster.jpg';">`;
     }
 
     // Set donghua details
@@ -209,8 +211,13 @@ async function loadDonghuaList() {
   `;
   
   try {
+    // Check supabase again
+    if (typeof window.supabase === 'undefined') {
+      throw new Error("Supabase client not initialized");
+    }
+    
     // Fetch all donghua from Supabase
-    const { data: donghuaList, error } = await supabase
+    const { data: donghuaList, error } = await window.supabase
       .from('donghua')
       .select('*')
       .order('title', { ascending: true });
@@ -218,9 +225,14 @@ async function loadDonghuaList() {
     if (error) throw error;
     
     const donghuaGrid = document.getElementById('donghuaListGrid');
+    if (!donghuaGrid) {
+      console.error('donghuaListGrid element not found');
+      return;
+    }
+    
     donghuaGrid.innerHTML = '';
     
-    if (donghuaList.length === 0) {
+    if (!donghuaList || donghuaList.length === 0) {
       donghuaGrid.innerHTML = '<p class="empty-message">Belum ada donghua tersedia.</p>';
       return;
     }
@@ -234,16 +246,16 @@ async function loadDonghuaList() {
       donghuaCard.className = 'donghua-card';
       donghuaCard.innerHTML = `
         <div class="donghua-poster">
-          <img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}">
+          <img src="${donghua.poster_url || 'images/default-poster.jpg'}" alt="${donghua.title}" onerror="this.src='images/default-poster.jpg';">
         </div>
         <div class="donghua-info">
           <h3 class="donghua-title">${donghua.title}</h3>
           <div class="donghua-meta">
-            <span>${donghua.year}</span>
-            <span>${donghua.status}</span>
+            <span>${donghua.year || '-'}</span>
+            <span>${donghua.status || '-'}</span>
           </div>
           <div class="donghua-rating">
-            <i class="fas fa-star"></i> ${donghua.rating}
+            <i class="fas fa-star"></i> ${donghua.rating || '0.0'}
           </div>
         </div>
       `;
@@ -251,14 +263,20 @@ async function loadDonghuaList() {
     });
   } catch (error) {
     console.error('Error loading donghua list:', error);
-    document.getElementById('donghuaListGrid').innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    const donghuaGrid = document.getElementById('donghuaListGrid');
+    if (donghuaGrid) {
+      donghuaGrid.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat data: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    }
   }
 }
 
 // Function to load episodes from Supabase
 async function loadEpisodes(donghuaId) {
   const episodesList = document.getElementById('episodeList');
-  if (!episodesList) return;
+  if (!episodesList) {
+    console.error('episodeList element not found');
+    return;
+  }
 
   try {
     // Show loading state
@@ -266,11 +284,16 @@ async function loadEpisodes(donghuaId) {
     
     console.log('Fetching episodes for donghua ID:', donghuaId);
     
+    // Check supabase again
+    if (typeof window.supabase === 'undefined') {
+      throw new Error("Supabase client not initialized");
+    }
+    
     // Convert to number if it's a string that contains a number
     const idToUse = isNaN(Number(donghuaId)) ? donghuaId : Number(donghuaId);
     
     // Fetch episodes data from Supabase
-    const { data: episodes, error } = await supabase
+    const { data: episodes, error } = await window.supabase
       .from('episodes')
       .select('*')
       .eq('donghua_id', idToUse)
@@ -287,7 +310,7 @@ async function loadEpisodes(donghuaId) {
     episodesList.innerHTML = '';
 
     // Create episode items
-    if (episodes.length === 0) {
+    if (!episodes || episodes.length === 0) {
       episodesList.innerHTML = '<p class="empty-message">Belum ada episode untuk donghua ini.</p>';
     } else {
       episodes.forEach(episode => {
@@ -302,11 +325,11 @@ async function loadEpisodes(donghuaId) {
         
         episodeItem.innerHTML = `
           <div class="episode-thumbnail">
-            <img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="Episode ${episode.episode_number}">
+            <img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="Episode ${episode.episode_number}" onerror="this.src='images/default-thumbnail.jpg';">
           </div>
           <div class="episode-info">
             <div class="episode-number">Episode ${episode.episode_number}</div>
-            <h3 class="episode-title">${episode.title}</h3>
+            <h3 class="episode-title">${episode.title || `Episode ${episode.episode_number}`}</h3>
           </div>
           ${vipBadge}
         `;
@@ -316,7 +339,9 @@ async function loadEpisodes(donghuaId) {
     }
   } catch (error) {
     console.error('Error loading episodes:', error);
-    episodesList.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat episode: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    if (episodesList) {
+      episodesList.innerHTML = `<p class="error-message">Terjadi kesalahan saat memuat episode: ${error.message || 'Tidak dapat terhubung ke database'}</p>`;
+    }
   }
 }
 
