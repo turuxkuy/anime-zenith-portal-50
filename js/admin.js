@@ -1,4 +1,24 @@
 document.addEventListener('DOMContentLoaded', function() {
+  console.log("Admin.js loaded");
+  
+  // Check if Supabase is available
+  if (typeof window.supabase === 'undefined') {
+    console.error("Supabase is not defined in admin.js - this is a critical error!");
+    
+    // Display error message to user
+    const adminContainer = document.querySelector('.admin-container');
+    if (adminContainer) {
+      adminContainer.innerHTML = `
+        <div style="padding: 2rem; color: white; text-align: center;">
+          <h2>Error: Database Connection Failed</h2>
+          <p>Could not connect to the database. Please try refreshing the page or contact support.</p>
+        </div>
+      `;
+    }
+    
+    return; // Stop execution
+  }
+  
   // Check admin authentication status
   checkAdminAuth()
     .then(isAdmin => {
@@ -155,12 +175,18 @@ async function loadDashboardData() {
       .select('*', { count: 'exact', head: true });
 
     const { count: totalUsers } = await supabase
-      .from('auth.users')
+      .from('profiles')
       .select('*', { count: 'exact', head: true });
+
+    const { count: vipUsers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'vip');
 
     document.getElementById('totalDonghua').textContent = totalDonghua || 0;
     document.getElementById('totalEpisodes').textContent = totalEpisodes || 0;
     document.getElementById('totalUsers').textContent = totalUsers || 0;
+    document.getElementById('vipUsers').textContent = vipUsers || 0;
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     showToast('Failed to load dashboard data.', 'error');
@@ -293,6 +319,9 @@ async function openModal(modalId, action, itemId = null) {
       modalTitle.textContent = 'Tambah Episode';
       form.reset();
       form.removeAttribute('data-id');
+      // Set default release date to today
+      const today = new Date().toISOString().split('T')[0];
+      form.querySelector('#releaseDate').value = today;
     } else if (action === 'edit' && itemId) {
       modalTitle.textContent = 'Edit Episode';
       form.setAttribute('data-id', itemId);
@@ -313,6 +342,9 @@ async function openModal(modalId, action, itemId = null) {
   if (closeModalBtn) {
     closeModalBtn.addEventListener('click', () => closeModal(modalId));
   }
+  
+  // Also close when clicking outside modal
+  overlay.addEventListener('click', () => closeModal(modalId));
 }
 
 // Function to close modal
@@ -368,11 +400,17 @@ async function populateEpisodeForm(episodeId) {
     form.querySelector('#donghuaSelect').value = episode.donghua_id;
     form.querySelector('#episodeNumber').value = episode.episode_number;
     form.querySelector('#episodeTitle').value = episode.title;
-    form.querySelector('#episodeDescription').value = episode.description;
-    form.querySelector('#episodeDuration').value = episode.duration;
+    form.querySelector('#episodeDescription').value = episode.description || '';
+    form.querySelector('#episodeDuration').value = episode.duration || '';
     form.querySelector('#isVip').value = episode.is_vip ? 'true' : 'false';
-    form.querySelector('#thumbnailUrl').value = episode.thumbnail_url;
-    form.querySelector('#videoUrl').value = episode.video_url;
+    form.querySelector('#thumbnailUrl').value = episode.thumbnail_url || '';
+    form.querySelector('#videoUrl').value = episode.video_url || '';
+    
+    // Format the release date for the input (YYYY-MM-DD)
+    if (episode.release_date) {
+      const releaseDate = new Date(episode.release_date).toISOString().split('T')[0];
+      form.querySelector('#releaseDate').value = releaseDate;
+    }
 
     // Trigger image preview
     previewImage('thumbnailUrl', 'thumbnailPreview');
@@ -501,6 +539,7 @@ async function handleDonghuaSubmit(event) {
 // Handle form submission for episode
 async function handleEpisodeSubmit(event) {
   event.preventDefault();
+  console.log("Episode form submission started");
 
   try {
     const form = event.target;
@@ -512,30 +551,42 @@ async function handleEpisodeSubmit(event) {
     const is_vip = form.querySelector('#isVip').value === 'true';
     const thumbnail_url = form.querySelector('#thumbnailUrl').value;
     const video_url = form.querySelector('#videoUrl').value;
+    const release_date = form.querySelector('#releaseDate').value;
 
     // Validate form fields
-    if (!donghua_id || !episode_number || !title || !description || !duration || !thumbnail_url || !video_url) {
+    if (!donghua_id || !episode_number || !title || !thumbnail_url || !video_url || !release_date) {
       showToast('Semua kolom harus diisi!', 'error');
       return;
     }
 
+    console.log("Form data validated, preparing to send to database");
+
     // Create episode object
     const episode = {
-      donghua_id,
+      donghua_id: parseInt(donghua_id), // Ensure donghua_id is an integer
       episode_number,
       title,
-      description,
-      duration,
+      description: description || null,
+      duration: duration || null,
       is_vip,
       thumbnail_url,
-      video_url
+      video_url,
+      release_date
     };
+
+    console.log("Episode data to submit:", episode);
 
     // Check if editing existing episode
     const editId = form.getAttribute('data-id');
+    
+    // Generate a UUID for new episodes
+    if (!editId) {
+      episode.id = crypto.randomUUID();
+    }
 
     if (editId) {
       // Update existing episode
+      console.log(`Updating episode with ID: ${editId}`);
       const { data, error } = await supabase
         .from('episodes')
         .update(episode)
@@ -548,11 +599,11 @@ async function handleEpisodeSubmit(event) {
         throw error;
       }
 
+      console.log("Episode updated successfully:", data);
       showToast('Episode berhasil diperbarui!', 'success');
-      closeModal('episodeModal');
-      loadEpisodeList();
     } else {
       // Insert new episode
+      console.log("Inserting new episode");
       const { data, error } = await supabase
         .from('episodes')
         .insert(episode)
@@ -564,10 +615,12 @@ async function handleEpisodeSubmit(event) {
         throw error;
       }
 
+      console.log("Episode inserted successfully:", data);
       showToast('Episode baru berhasil ditambahkan!', 'success');
-      closeModal('episodeModal');
-      loadEpisodeList();
     }
+
+    closeModal('episodeModal');
+    loadEpisodeList();
   } catch (error) {
     console.error('Error handling episode form:', error);
     showToast(`Terjadi kesalahan: ${error.message}`, 'error');
@@ -657,20 +710,32 @@ async function loadDonghuaOptions() {
   if (!donghuaSelect) return;
 
   try {
+    console.log("Loading donghua options for select dropdown");
     const { data: donghuaData, error } = await supabase
       .from('donghua')
       .select('id, title')
       .order('title', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error loading donghua options:", error);
+      throw error;
+    }
 
-    donghuaSelect.innerHTML = '';
-    donghuaData.forEach(donghua => {
-      const option = document.createElement('option');
-      option.value = donghua.id;
-      option.textContent = donghua.title;
-      donghuaSelect.appendChild(option);
-    });
+    console.log(`Loaded ${donghuaData?.length || 0} donghua options`);
+    
+    donghuaSelect.innerHTML = '<option value="">-- Pilih Donghua --</option>';
+    
+    if (donghuaData && donghuaData.length > 0) {
+      donghuaData.forEach(donghua => {
+        const option = document.createElement('option');
+        option.value = donghua.id;
+        option.textContent = donghua.title;
+        donghuaSelect.appendChild(option);
+      });
+    } else {
+      console.warn("No donghua data found for select dropdown");
+      donghuaSelect.innerHTML += '<option value="" disabled>No donghua available</option>';
+    }
   } catch (error) {
     console.error('Error loading donghua options:', error);
     showToast('Failed to load donghua options.', 'error');
@@ -712,9 +777,8 @@ async function checkAdminAuth() {
     console.log('Auth session data:', data);
     
     if (!data.session) {
-      console.log('No session found, but allowing access for debugging');
-      // For debugging purposes only - remove in production
-      return true;
+      console.log('No session found, redirecting to login');
+      return false;
     }
     
     console.log('User ID from session:', data.session.user.id);
@@ -730,26 +794,14 @@ async function checkAdminAuth() {
     
     if (error || !profileData) {
       console.error('Error fetching user role or profile not found:', error);
-      // For debugging purposes, temporarily bypass auth check
-      console.log('DEBUG MODE: Bypassing auth check for debugging');
-      return true;
+      return false;
     }
     
     console.log('User role:', profileData.role);
     
-    if (profileData.role !== 'admin') {
-      console.log('User is not an admin, but allowing access for debugging');
-      // For debugging purposes only - remove in production
-      return true;
-    }
-    
-    console.log('Admin authentication successful');
-    return true;
+    return profileData.role === 'admin';
   } catch (error) {
     console.error('Error checking admin auth:', error);
-    
-    // For debugging purposes only - remove in production
-    console.log('DEBUG MODE: Bypassing error handling for debugging');
-    return true;
+    return false;
   }
 }

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -10,6 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // Define supabaseClient globally before config loads
     const supabaseClient = window.supabase;
     console.log('Supabase JS loaded on admin page');
   </script>
@@ -251,6 +251,10 @@
               <div class="form-group">
                 <label for="videoUrl">URL Video (MP4 atau Embed)</label>
                 <input type="url" id="videoUrl" name="videoUrl" placeholder="https://example.com/video.mp4" required>
+              </div>
+              <div class="form-group">
+                <label for="releaseDate">Tanggal Rilis</label>
+                <input type="date" id="releaseDate" name="releaseDate" required>
               </div>
               <button type="submit" class="submit-button">Simpan</button>
             </form>

@@ -8,12 +8,29 @@ console.log("Initializing Supabase client...");
 
 try {
   // Create the Supabase client
-  const supabase = supabaseClient.createClient(supabaseUrl, supabaseAnonKey);
-  
-  // Make it globally available
-  window.supabase = supabase;
+  if (typeof supabaseClient === 'undefined') {
+    console.log("Using default Supabase initialization");
+    // Create Supabase client directly
+    window.supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+  } else {
+    console.log("Using supabaseClient for initialization");
+    // Create the client using provided supabaseClient
+    window.supabase = supabaseClient.createClient(supabaseUrl, supabaseAnonKey);
+  }
   
   console.log('Supabase client initialized successfully');
+  
+  // Test connection
+  window.supabase
+    .from('donghua')
+    .select('count', { count: 'exact', head: true })
+    .then(result => {
+      console.log('Connection test result:', result);
+    })
+    .catch(err => {
+      console.error('Connection test failed:', err);
+    });
+    
 } catch (error) {
   console.error('Failed to initialize Supabase client:', error);
 }
