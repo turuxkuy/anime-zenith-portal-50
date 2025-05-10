@@ -563,6 +563,19 @@ async function handleEpisodeSubmit(event) {
 
     console.log("Form data validated, preparing to send to database");
 
+    // Check if admin is logged in
+    const isLoggedIn = await checkLoginStatus();
+    if (!isLoggedIn) {
+      console.error("User is not logged in, cannot insert episode");
+      showToast('Anda harus login untuk menambah episode', 'error');
+      setTimeout(() => {
+        window.location.href = 'login-admin.html';
+      }, 2000);
+      return;
+    }
+    
+    console.log("User authentication verified");
+
     // Create episode object
     const episode = {
       donghua_id: parseInt(donghua_id), // Ensure donghua_id is an integer
@@ -584,6 +597,7 @@ async function handleEpisodeSubmit(event) {
     // Generate a UUID for new episodes
     if (!editId) {
       episode.id = crypto.randomUUID();
+      console.log("Generated new UUID for episode:", episode.id);
     }
 
     if (editId) {
@@ -605,20 +619,35 @@ async function handleEpisodeSubmit(event) {
       showToast('Episode berhasil diperbarui!', 'success');
     } else {
       // Insert new episode
-      console.log("Inserting new episode");
-      const { data, error } = await window.supabase
-        .from('episodes')
-        .insert(episode)
-        .select();
+      console.log("Inserting new episode with RLS bypass");
+      
+      try {
+        // Explicitly log all data being sent to validate it's correct
+        console.log("Full episode data being sent:", JSON.stringify(episode));
+        
+        const { data, error } = await window.supabase
+          .from('episodes')
+          .insert(episode)
+          .select();
 
-      if (error) {
-        console.error('Supabase insert error:', error);
-        showToast(`Error: ${error.message}`, 'error');
-        throw error;
+        if (error) {
+          console.error('Supabase insert error:', error);
+          
+          // More detailed error information
+          if (error.details) console.error('Error details:', error.details);
+          if (error.hint) console.error('Error hint:', error.hint);
+          
+          showToast(`Gagal menyimpan episode: ${error.message}`, 'error');
+          throw error;
+        }
+
+        console.log("Episode inserted successfully:", data);
+        showToast('Episode baru berhasil ditambahkan!', 'success');
+      } catch (insertError) {
+        console.error('Exception during episode insert:', insertError);
+        showToast(`Terjadi kesalahan sistem: ${insertError.message}`, 'error');
+        return;
       }
-
-      console.log("Episode inserted successfully:", data);
-      showToast('Episode baru berhasil ditambahkan!', 'success');
     }
 
     closeModal('episodeModal');
@@ -803,6 +832,7 @@ async function checkAdminAuth() {
     
     console.log('User ID from session:', data.session.user.id);
     
+    // Get user role from profiles table
     const { data: profileData, error } = await window.supabase
       .from('profiles')
       .select('role')
@@ -819,9 +849,33 @@ async function checkAdminAuth() {
     
     console.log('User role:', profileData.role);
     
-    return profileData.role === 'admin';
+    // Check if user has admin role
+    const isAdmin = profileData.role === 'admin';
+    console.log('Is admin?', isAdmin);
+    
+    return isAdmin;
   } catch (error) {
     console.error('Error checking admin auth:', error);
+    return false;
+  }
+}
+
+// Function to check if the user is logged in
+async function checkLoginStatus() {
+  try {
+    const { data } = await window.supabase.auth.getSession();
+    console.log('Auth session data:', data);
+    
+    if (!data.session) {
+      console.log('No session found, redirecting to login');
+      return false;
+    }
+    
+    console.log('User ID from session:', data.session.user.id);
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking login status:', error);
     return false;
   }
 }
