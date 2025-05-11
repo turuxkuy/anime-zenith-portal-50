@@ -593,9 +593,22 @@ async function handleEpisodeSubmit(event) {
     
     console.log("User authentication verified, user ID:", session.user.id);
 
-    // Create episode object with string ID format
+    // Check admin role with explicit query
+    const { data: profileData, error: profileError } = await window.supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (profileError || !profileData || profileData.role !== 'admin') {
+      console.error("User is not an admin, cannot insert episode");
+      showToast('Anda tidak memiliki hak akses admin untuk menambahkan episode.', 'error');
+      return;
+    }
+
+    // Create episode object with proper data types
     const episode = {
-      donghua_id: parseInt(donghua_id),
+      donghua_id: parseInt(donghua_id), // Make sure this is an integer
       episode_number,
       title,
       description: description || null,
@@ -603,10 +616,9 @@ async function handleEpisodeSubmit(event) {
       is_vip,
       thumbnail_url,
       video_url,
-      release_date
+      release_date,
+      // Let the database handle timestamps
     };
-
-    console.log("Episode data to submit:", episode);
 
     // Check if editing existing episode
     const editId = form.getAttribute('data-id');
@@ -617,7 +629,8 @@ async function handleEpisodeSubmit(event) {
       const { data, error } = await window.supabase
         .from('episodes')
         .update(episode)
-        .eq('id', editId);
+        .eq('id', editId)
+        .select();
 
       if (error) {
         console.error('Supabase update error:', error);
@@ -625,25 +638,24 @@ async function handleEpisodeSubmit(event) {
         return;
       }
 
-      console.log("Episode updated successfully!");
+      console.log("Episode updated successfully:", data);
       showToast('Episode berhasil diperbarui!', 'success');
       
       // Close modal and refresh episode list
       closeModal('episodeModal');
       loadEpisodeList();
     } else {
-      // For new episodes, generate UUID if needed
-      if (!episode.id) {
-        episode.id = crypto.randomUUID();
-        console.log("Generated UUID for episode:", episode.id);
-      }
+      // For new episodes, generate UUID for id field
+      episode.id = crypto.randomUUID();
+      console.log("Generated UUID for episode:", episode.id);
       
-      console.log("Final episode data being sent:", JSON.stringify(episode));
+      console.log("Final episode data being sent:", episode);
       
-      // Insert new episode
+      // Insert new episode with explicit select() to see the response
       const { data, error } = await window.supabase
         .from('episodes')
-        .insert(episode);
+        .insert(episode)
+        .select();
 
       if (error) {
         console.error('Supabase insert error:', error);
@@ -654,7 +666,7 @@ async function handleEpisodeSubmit(event) {
         return;
       }
 
-      console.log("Episode inserted successfully!");
+      console.log("Episode inserted successfully:", data);
       showToast('Episode baru berhasil ditambahkan!', 'success');
       
       // Close modal and refresh episode list
