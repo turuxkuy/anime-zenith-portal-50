@@ -128,7 +128,7 @@ async function logout() {
     window.location.href = 'login.html';
   } catch (error) {
     console.error('Logout failed:', error);
-    showToast('Logout failed. Please try again.', 'error');
+    showToast('Logout failed. Please try again later.', 'error');
   }
 }
 
@@ -563,22 +563,22 @@ async function handleEpisodeSubmit(event) {
 
     console.log("Form data validated, preparing to send to database");
 
-    // Check if admin is logged in
-    const isLoggedIn = await checkLoginStatus();
-    if (!isLoggedIn) {
+    // Get current auth session to verify logged in status
+    const { data: { session } } = await window.supabase.auth.getSession();
+    if (!session) {
       console.error("User is not logged in, cannot insert episode");
-      showToast('Anda harus login untuk menambah episode', 'error');
+      showToast('Sesi login telah berakhir. Silahkan login kembali.', 'error');
       setTimeout(() => {
         window.location.href = 'login-admin.html';
       }, 2000);
       return;
     }
     
-    console.log("User authentication verified");
+    console.log("User authentication verified, user ID:", session.user.id);
 
     // Create episode object
     const episode = {
-      donghua_id: parseInt(donghua_id), // Ensure donghua_id is an integer
+      donghua_id: parseInt(donghua_id),
       episode_number,
       title,
       description: description || null,
@@ -596,6 +596,7 @@ async function handleEpisodeSubmit(event) {
     
     // Generate a UUID for new episodes
     if (!editId) {
+      // Use a proper UUID for consistent handling across browsers
       episode.id = crypto.randomUUID();
       console.log("Generated new UUID for episode:", episode.id);
     }
@@ -611,24 +612,28 @@ async function handleEpisodeSubmit(event) {
 
       if (error) {
         console.error('Supabase update error:', error);
-        showToast(`Error: ${error.message}`, 'error');
+        showToast(`Gagal memperbarui episode: ${error.message}`, 'error');
         throw error;
       }
 
       console.log("Episode updated successfully:", data);
       showToast('Episode berhasil diperbarui!', 'success');
+      
+      // Close modal and refresh episode list
+      closeModal('episodeModal');
+      loadEpisodeList();
     } else {
-      // Insert new episode
-      console.log("Inserting new episode with RLS bypass");
+      // Insert new episode with better error handling
+      console.log("Inserting new episode...");
       
       try {
-        // Explicitly log all data being sent to validate it's correct
+        // Log full data for debugging
         console.log("Full episode data being sent:", JSON.stringify(episode));
         
+        // Insert with RLS handling
         const { data, error } = await window.supabase
           .from('episodes')
-          .insert(episode)
-          .select();
+          .insert(episode);
 
         if (error) {
           console.error('Supabase insert error:', error);
@@ -638,20 +643,20 @@ async function handleEpisodeSubmit(event) {
           if (error.hint) console.error('Error hint:', error.hint);
           
           showToast(`Gagal menyimpan episode: ${error.message}`, 'error');
-          throw error;
+          return;
         }
 
-        console.log("Episode inserted successfully:", data);
+        console.log("Episode inserted successfully!");
         showToast('Episode baru berhasil ditambahkan!', 'success');
+        
+        // Close modal and refresh episode list
+        closeModal('episodeModal');
+        loadEpisodeList();
       } catch (insertError) {
         console.error('Exception during episode insert:', insertError);
         showToast(`Terjadi kesalahan sistem: ${insertError.message}`, 'error');
-        return;
       }
     }
-
-    closeModal('episodeModal');
-    loadEpisodeList();
   } catch (error) {
     console.error('Error handling episode form:', error);
     showToast(`Terjadi kesalahan: ${error.message}`, 'error');
@@ -867,7 +872,7 @@ async function checkLoginStatus() {
     console.log('Auth session data:', data);
     
     if (!data.session) {
-      console.log('No session found, redirecting to login');
+      console.log('No session found');
       return false;
     }
     

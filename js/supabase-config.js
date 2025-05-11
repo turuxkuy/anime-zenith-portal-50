@@ -8,7 +8,13 @@ console.log("Initializing Supabase client...");
 
 try {
   // Create the Supabase client
-  window.supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+  window.supabase = supabase.createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      storage: window.localStorage
+    }
+  });
   
   console.log('Supabase client initialized successfully');
   
