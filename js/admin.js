@@ -593,7 +593,7 @@ async function handleEpisodeSubmit(event) {
     
     console.log("User authentication verified, user ID:", session.user.id);
 
-    // Create episode object
+    // Create episode object with string ID format
     const episode = {
       donghua_id: parseInt(donghua_id),
       episode_number,
@@ -603,22 +603,13 @@ async function handleEpisodeSubmit(event) {
       is_vip,
       thumbnail_url,
       video_url,
-      release_date,
-      // Adding timestamps if they don't exist in the database schema
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      release_date
     };
 
     console.log("Episode data to submit:", episode);
 
     // Check if editing existing episode
     const editId = form.getAttribute('data-id');
-    
-    if (!editId) {
-      // Use a proper UUID for consistent handling across browsers
-      episode.id = crypto.randomUUID();
-      console.log("Generated new UUID for episode:", episode.id);
-    }
 
     if (editId) {
       // Update existing episode
@@ -641,48 +632,34 @@ async function handleEpisodeSubmit(event) {
       closeModal('episodeModal');
       loadEpisodeList();
     } else {
-      // Insert new episode with better error handling
-      console.log("Inserting new episode...");
-      
-      try {
-        // IMPORTANT: Remove created_at and updated_at as they are managed by the database
-        delete episode.created_at;
-        delete episode.updated_at;
-        
-        // Log full data for debugging
-        console.log("Final episode data being sent:", JSON.stringify(episode));
-        
-        // Insert with RLS handling
-        const { data, error } = await window.supabase
-          .from('episodes')
-          .insert(episode);
-
-        if (error) {
-          console.error('Supabase insert error:', error);
-          
-          // More detailed error information
-          if (error.details) console.error('Error details:', error.details);
-          if (error.hint) console.error('Error hint:', error.hint);
-          
-          showToast(`Gagal menyimpan episode: ${error.message}`, 'error');
-          return;
-        }
-
-        console.log("Episode inserted successfully!");
-        showToast('Episode baru berhasil ditambahkan!', 'success');
-        
-        // Close modal and refresh episode list
-        closeModal('episodeModal');
-        loadEpisodeList();
-        
-        // After successful insert, force a refresh of any relevant pages
-        if (window.loadDonghuaEpisodes) {
-          window.loadDonghuaEpisodes();
-        }
-      } catch (insertError) {
-        console.error('Exception during episode insert:', insertError);
-        showToast(`Terjadi kesalahan sistem: ${insertError.message}`, 'error');
+      // For new episodes, generate UUID if needed
+      if (!episode.id) {
+        episode.id = crypto.randomUUID();
+        console.log("Generated UUID for episode:", episode.id);
       }
+      
+      console.log("Final episode data being sent:", JSON.stringify(episode));
+      
+      // Insert new episode
+      const { data, error } = await window.supabase
+        .from('episodes')
+        .insert(episode);
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        console.error('Error details:', error.details || 'No details');
+        console.error('Error hint:', error.hint || 'No hint');
+        
+        showToast(`Gagal menyimpan episode: ${error.message}`, 'error');
+        return;
+      }
+
+      console.log("Episode inserted successfully!");
+      showToast('Episode baru berhasil ditambahkan!', 'success');
+      
+      // Close modal and refresh episode list
+      closeModal('episodeModal');
+      loadEpisodeList();
     }
   } catch (error) {
     console.error('Error handling episode form:', error);
