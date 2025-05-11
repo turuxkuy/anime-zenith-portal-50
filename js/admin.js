@@ -237,28 +237,38 @@ async function loadEpisodeList() {
     const { data: episodes, error } = await window.supabase
       .from('episodes')
       .select('*, donghua(title)')
-      .order('episode_number', { ascending: true });
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading episodes:', error);
+      throw error;
+    }
 
+    console.log('Episodes loaded:', episodes);
+    
     episodeTableBody.innerHTML = '';
-    episodes.forEach(episode => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td><div class="table-thumbnail"><img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="${episode.title}" width="50"></div></td>
-        <td>${episode.donghua?.title || 'Unknown'}</td>
-        <td>${episode.episode_number}</td>
-        <td>${episode.title}</td>
-        <td><span class="status-badge ${episode.is_vip ? 'status-vip' : 'status-free'}">${episode.is_vip ? 'VIP' : 'Umum'}</span></td>
-        <td>
-          <div class="table-actions">
-            <button class="edit-btn" onclick="openModal('episodeModal', 'edit', '${episode.id}')"><i class="fas fa-edit"></i></button>
-            <button class="delete-btn" onclick="deleteEpisode('${episode.id}')"><i class="fas fa-trash-alt"></i></button>
-          </div>
-        </td>
-      `;
-      episodeTableBody.appendChild(row);
-    });
+    
+    if (episodes && episodes.length > 0) {
+      episodes.forEach(episode => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><div class="table-thumbnail"><img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="${episode.title}" width="50"></div></td>
+          <td>${episode.donghua?.title || 'Unknown'}</td>
+          <td>${episode.episode_number}</td>
+          <td>${episode.title}</td>
+          <td><span class="status-badge ${episode.is_vip ? 'status-vip' : 'status-free'}">${episode.is_vip ? 'VIP' : 'Umum'}</span></td>
+          <td>
+            <div class="table-actions">
+              <button class="edit-btn" onclick="openModal('episodeModal', 'edit', '${episode.id}')"><i class="fas fa-edit"></i></button>
+              <button class="delete-btn" onclick="deleteEpisode('${episode.id}')"><i class="fas fa-trash-alt"></i></button>
+            </div>
+          </td>
+        `;
+        episodeTableBody.appendChild(row);
+      });
+    } else {
+      episodeTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Tidak ada episode yang tersedia</td></tr>`;
+    }
   } catch (error) {
     console.error('Error loading episode list:', error);
     showToast('Failed to load episode list.', 'error');
@@ -390,13 +400,20 @@ async function populateDonghuaForm(donghuaId) {
 // Function to populate episode form for editing
 async function populateEpisodeForm(episodeId) {
   try {
+    console.log('Populating episode form for ID:', episodeId);
+    
     const { data: episode, error } = await window.supabase
       .from('episodes')
       .select('*')
       .eq('id', episodeId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching episode:', error);
+      throw error;
+    }
+
+    console.log('Episode data for editing:', episode);
 
     const form = document.getElementById('episodeForm');
     form.querySelector('#donghuaSelect').value = episode.donghua_id;
@@ -557,7 +574,7 @@ async function handleEpisodeSubmit(event) {
 
     // Validate form fields
     if (!donghua_id || !episode_number || !title || !thumbnail_url || !video_url || !release_date) {
-      showToast('Semua kolom harus diisi!', 'error');
+      showToast('Semua kolom wajib diisi!', 'error');
       return;
     }
 
@@ -586,7 +603,10 @@ async function handleEpisodeSubmit(event) {
       is_vip,
       thumbnail_url,
       video_url,
-      release_date
+      release_date,
+      // Adding timestamps if they don't exist in the database schema
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     console.log("Episode data to submit:", episode);
@@ -594,7 +614,6 @@ async function handleEpisodeSubmit(event) {
     // Check if editing existing episode
     const editId = form.getAttribute('data-id');
     
-    // Generate a UUID for new episodes
     if (!editId) {
       // Use a proper UUID for consistent handling across browsers
       episode.id = crypto.randomUUID();
@@ -607,16 +626,15 @@ async function handleEpisodeSubmit(event) {
       const { data, error } = await window.supabase
         .from('episodes')
         .update(episode)
-        .eq('id', editId)
-        .select();
+        .eq('id', editId);
 
       if (error) {
         console.error('Supabase update error:', error);
         showToast(`Gagal memperbarui episode: ${error.message}`, 'error');
-        throw error;
+        return;
       }
 
-      console.log("Episode updated successfully:", data);
+      console.log("Episode updated successfully!");
       showToast('Episode berhasil diperbarui!', 'success');
       
       // Close modal and refresh episode list
@@ -627,8 +645,12 @@ async function handleEpisodeSubmit(event) {
       console.log("Inserting new episode...");
       
       try {
+        // IMPORTANT: Remove created_at and updated_at as they are managed by the database
+        delete episode.created_at;
+        delete episode.updated_at;
+        
         // Log full data for debugging
-        console.log("Full episode data being sent:", JSON.stringify(episode));
+        console.log("Final episode data being sent:", JSON.stringify(episode));
         
         // Insert with RLS handling
         const { data, error } = await window.supabase
@@ -652,6 +674,11 @@ async function handleEpisodeSubmit(event) {
         // Close modal and refresh episode list
         closeModal('episodeModal');
         loadEpisodeList();
+        
+        // After successful insert, force a refresh of any relevant pages
+        if (window.loadDonghuaEpisodes) {
+          window.loadDonghuaEpisodes();
+        }
       } catch (insertError) {
         console.error('Exception during episode insert:', insertError);
         showToast(`Terjadi kesalahan sistem: ${insertError.message}`, 'error');
@@ -724,18 +751,24 @@ async function deleteDonghua(donghuaId) {
 async function deleteEpisode(episodeId) {
   if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
     try {
+      console.log('Deleting episode with ID:', episodeId);
+      
       const { error } = await window.supabase
         .from('episodes')
         .delete()
         .eq('id', episodeId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting episode:', error);
+        throw error;
+      }
 
+      console.log('Episode successfully deleted');
       showToast('Episode berhasil dihapus!', 'success');
       loadEpisodeList();
     } catch (error) {
       console.error('Error deleting episode:', error);
-      showToast('Failed to delete episode.', 'error');
+      showToast('Failed to delete episode: ' + error.message, 'error');
     }
   }
 }
