@@ -119,6 +119,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (error) throw error;
         
+        console.log('Registration successful, creating profile for user:', data.user.id, 'with username:', username);
+        
         // Create user profile
         if (data.user) {
           const { error: profileError } = await supabase

@@ -8,6 +8,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     return;
   }
   
+  // Initialize menu toggle functionality
+  const menuToggle = document.querySelector('.menu-toggle');
+  const navMenu = document.querySelector('.nav-menu');
+  
+  if (menuToggle && navMenu) {
+    menuToggle.addEventListener('click', function() {
+      navMenu.classList.toggle('active');
+      console.log('Menu toggle clicked, menu is now:', navMenu.classList.contains('active') ? 'active' : 'inactive');
+    });
+  }
+  
   // Check authentication status
   try {
     const { data } = await supabase.auth.getSession();
@@ -61,8 +72,28 @@ document.addEventListener('DOMContentLoaded', async function() {
             .single();
             
           const username = profileData?.username || 'User';
+          console.log('Sending VIP request for user:', username, 'with ID:', userId);
           
-          await supabase
+          // Check if this user has already sent a request
+          const { data: existingRequests, error: checkError } = await supabase
+            .from('vip_requests')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('status', 'pending');
+            
+          if (checkError) {
+            console.error('Error checking existing VIP requests:', checkError);
+          }
+          
+          if (existingRequests && existingRequests.length > 0) {
+            console.log('User already has a pending VIP request');
+            // Show VIP request modal anyway
+            if (requestVipModal) requestVipModal.style.display = 'flex';
+            return;
+          }
+          
+          // Insert new VIP request
+          const { data: insertData, error: insertError } = await supabase
             .from('vip_requests')
             .insert([
               {
@@ -71,6 +102,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 status: 'pending'
               }
             ]);
+          
+          if (insertError) {
+            throw insertError;
+          }
+          
+          console.log('VIP request sent successfully:', insertData);
           
           // Show VIP request modal
           if (requestVipModal) requestVipModal.style.display = 'flex';
@@ -169,6 +206,15 @@ async function loadUserProfile(userId) {
   try {
     console.log('Loading profile for user:', userId);
     
+    // Fetch user metadata from auth.users
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('Error fetching user data:', userError);
+    } else {
+      console.log('User data from auth:', userData);
+    }
+    
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
@@ -177,6 +223,36 @@ async function loadUserProfile(userId) {
     
     if (error) {
       console.error('Error fetching profile:', error);
+      
+      // If profile doesn't exist, try to create one using metadata
+      if (error.code === 'PGRST116') {
+        console.log('Profile not found, creating from user metadata');
+        
+        if (userData && userData.user) {
+          const username = userData.user.user_metadata?.username || userData.user.email?.split('@')[0] || 'User';
+          
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: userId,
+                username: username,
+                email: userData.user.email,
+                role: 'user'
+              }
+            ])
+            .select()
+            .single();
+            
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            throw insertError;
+          }
+          
+          console.log('Created new profile:', newProfile);
+          return await loadUserProfile(userId); // Reload after creating
+        }
+      }
       throw error;
     }
     

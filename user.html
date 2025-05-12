@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -181,14 +180,26 @@
   </footer>
 
   <script>
-    // Make sure auth.js runs after Supabase is fully initialized
+    // Initialize menu toggle functionality
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('User page ready, checking Supabase availability');
-      if (typeof supabase !== 'undefined') {
-        console.log('Supabase available on user page');
-      } else {
-        console.error('Supabase not available on user page!');
+      const menuToggle = document.querySelector('.menu-toggle');
+      const navMenu = document.querySelector('.nav-menu');
+      
+      if (menuToggle && navMenu) {
+        menuToggle.addEventListener('click', function() {
+          navMenu.classList.toggle('active');
+        });
       }
+      
+      // Close mobile menu when clicking anywhere outside
+      document.addEventListener('click', function(event) {
+        const isClickInsideMenu = navMenu.contains(event.target);
+        const isClickOnToggle = menuToggle.contains(event.target);
+        
+        if (!isClickInsideMenu && !isClickOnToggle && navMenu.classList.contains('active')) {
+          navMenu.classList.remove('active');
+        }
+      });
     });
   </script>
   <script src="js/auth.js"></script>
