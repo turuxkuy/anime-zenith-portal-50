@@ -16,8 +16,8 @@
     /* Tambahan style untuk grid episode */
     .number-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
       margin-top: 20px;
     }
     
@@ -27,7 +27,7 @@
       justify-content: center;
       align-items: center;
       background-color: #222;
-      padding: 15px;
+      padding: 10px;
       border-radius: 5px;
       text-decoration: none;
       color: white;
@@ -36,7 +36,7 @@
     
     .episode-number:hover {
       background-color: #333;
-      transform: translateY(-3px);
+      transform: translateY(-2px);
     }
     
     .episode-number.current {
@@ -45,7 +45,7 @@
     }
     
     .number {
-      font-size: 1.5rem;
+      font-size: 1.1rem;
       font-weight: bold;
     }
     
@@ -57,21 +57,63 @@
       background-color: rgba(165, 132, 76, 0.9);
       color: #fff;
       text-align: center;
-      font-size: 0.75rem;
+      font-size: 0.6rem;
       font-weight: bold;
-      padding: 2px 0;
+      padding: 1px 0;
       border-radius: 0 0 5px 5px;
+    }
+    
+    /* Fix video player responsiveness */
+    .video-container {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background-color: #000;
+      margin-bottom: 1.5rem;
+      width: 100%;
+    }
+    
+    .video-player {
+      position: relative;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      max-height: 70vh; /* Limit maximum height */
+    }
+    
+    .video-player iframe,
+    .video-player video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+    }
+    
+    #videoWrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
     }
     
     @media (max-width: 768px) {
       .number-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(6, 1fr);
+      }
+      
+      .number {
+        font-size: 1rem;
       }
     }
     
     @media (max-width: 480px) {
       .number-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+      }
+      
+      .number {
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -132,8 +174,8 @@
 
       <div class="more-episodes">
         <h3>Episode Lainnya</h3>
-        <div class="episode-grid" id="moreEpisodesList">
-          <!-- More episodes will be loaded here via JavaScript - now as a grid of numbers -->
+        <div class="number-grid" id="moreEpisodesList">
+          <!-- More episodes will be loaded here via JavaScript - as a grid of numbers -->
         </div>
       </div>
     </section>
