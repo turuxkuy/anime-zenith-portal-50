@@ -12,6 +12,69 @@
     const supabaseClient = window.supabase;
   </script>
   <script src="js/supabase-config.js"></script>
+  <style>
+    /* Tambahan style untuk grid episode */
+    .number-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .episode-number {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #222;
+      padding: 15px;
+      border-radius: 5px;
+      text-decoration: none;
+      color: white;
+      transition: all 0.3s ease;
+    }
+    
+    .episode-number:hover {
+      background-color: #333;
+      transform: translateY(-3px);
+    }
+    
+    .episode-number.current {
+      background-color: #444;
+      border: 2px solid #00cc66;
+    }
+    
+    .number {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .vip-tag {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: rgba(165, 132, 76, 0.9);
+      color: #fff;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 2px 0;
+      border-radius: 0 0 5px 5px;
+    }
+    
+    @media (max-width: 768px) {
+      .number-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .number-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -70,7 +133,7 @@
       <div class="more-episodes">
         <h3>Episode Lainnya</h3>
         <div class="episode-grid" id="moreEpisodesList">
-          <!-- More episodes will be loaded here via JavaScript -->
+          <!-- More episodes will be loaded here via JavaScript - now as a grid of numbers -->
         </div>
       </div>
     </section>

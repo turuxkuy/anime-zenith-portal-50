@@ -148,13 +148,29 @@ async function loadEpisodeDetails() {
       vipOverlay.style.display = 'none';
       
       // Check if video URL is external (embed) or local
-      if (episode.video_url && episode.video_url.includes('iframe')) {
-        // It's an embed code
+      if (episode.video_url && episode.video_url.includes('<iframe')) {
+        // It's an embed code, sanitize it properly
+        console.log("Embedding iframe content:", episode.video_url);
         videoWrapper.innerHTML = episode.video_url;
+      } else if (episode.video_url && (episode.video_url.includes('youtube.com') || episode.video_url.includes('youtu.be'))) {
+        // It's a YouTube URL, convert to embed
+        const youtubeId = extractYoutubeId(episode.video_url);
+        videoWrapper.innerHTML = `
+          <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${youtubeId}" 
+          frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen></iframe>
+        `;
+      } else if (episode.video_url && episode.video_url.includes('drive.google.com')) {
+        // It's a Google Drive URL, convert to embed
+        const driveId = extractGoogleDriveId(episode.video_url);
+        videoWrapper.innerHTML = `
+          <iframe width="100%" height="100%" src="https://drive.google.com/file/d/${driveId}/preview" 
+          frameborder="0" allow="autoplay" allowfullscreen></iframe>
+        `;
       } else if (episode.video_url) {
         // It's a direct video URL
         videoWrapper.innerHTML = `
-          <video controls>
+          <video controls style="width:100%; height:100%;">
             <source src="${episode.video_url}" type="video/mp4">
             Browser Anda tidak mendukung pemutaran video.
           </video>
@@ -175,6 +191,21 @@ async function loadEpisodeDetails() {
     document.getElementById('episodeTitle').textContent = 'Error loading episode';
     document.getElementById('episodeDescription').textContent = `Terjadi kesalahan saat memuat episode: ${error.message || 'Tidak dapat terhubung ke database'}`;
   }
+}
+
+// Function to extract YouTube ID from URL
+function extractYoutubeId(url) {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Function to extract Google Drive ID from URL
+function extractGoogleDriveId(url) {
+  // Regular pattern: https://drive.google.com/file/d/DRIVE_ID/view
+  const pattern = /\/file\/d\/([^\/]+)/;
+  const match = url.match(pattern);
+  return match ? match[1] : null;
 }
 
 // Function to load episode navigation (prev/next)
@@ -217,7 +248,7 @@ async function loadEpisodeNavigation(donghuaId, currentEpisodeNumber) {
   }
 }
 
-// Function to load more episodes
+// Function to load more episodes - updated to use grid layout like in the image
 async function loadMoreEpisodes(donghuaId, currentEpisodeId) {
   const moreEpisodesList = document.getElementById('moreEpisodesList');
   if (!moreEpisodesList) return;
@@ -235,40 +266,45 @@ async function loadMoreEpisodes(donghuaId, currentEpisodeId) {
     // Clear existing episodes
     moreEpisodesList.innerHTML = '';
     
-    // Show up to 6 episodes, prioritizing ones close to current
-    const episodesToShow = episodes
-      .filter(ep => ep.id !== currentEpisodeId) // exclude current episode
-      .slice(0, 6);
-      
-    if (episodesToShow.length === 0) {
+    if (episodes.length === 0) {
       moreEpisodesList.innerHTML = '<p class="empty-message">Tidak ada episode lain.</p>';
       return;
     }
     
-    // Create episode cards
-    episodesToShow.forEach(episode => {
+    // Create grid layout for episodes
+    const episodeGrid = document.createElement('div');
+    episodeGrid.className = 'number-grid';
+    
+    // Add all episodes to the grid
+    episodes.forEach(episode => {
       const episodeCard = document.createElement('a');
       episodeCard.href = `episode.html?id=${episode.id}&donghuaId=${donghuaId}`;
-      episodeCard.className = 'episode-card';
       
-      let vipBadge = '';
-      if (episode.is_vip) {
-        vipBadge = '<span class="vip-badge"><i class="fas fa-crown"></i></span>';
+      // Highlight current episode with different style
+      if (episode.id === currentEpisodeId) {
+        episodeCard.className = 'episode-number current';
+      } else {
+        episodeCard.className = 'episode-number';
       }
       
-      episodeCard.innerHTML = `
-        <div class="episode-thumbnail">
-          <img src="${episode.thumbnail_url || 'images/default-thumbnail.jpg'}" alt="Episode ${episode.episode_number}">
-          ${vipBadge}
-        </div>
-        <div class="episode-info">
-          <span class="episode-number">Episode ${episode.episode_number}</span>
-          <h4>${episode.title}</h4>
-        </div>
-      `;
+      // Create episode number
+      const numberDisplay = document.createElement('div');
+      numberDisplay.className = 'number';
+      numberDisplay.textContent = episode.episode_number;
       
-      moreEpisodesList.appendChild(episodeCard);
+      // Add VIP badge if needed
+      if (episode.is_vip) {
+        const vipBadge = document.createElement('div');
+        vipBadge.className = 'vip-tag';
+        vipBadge.textContent = 'VIP';
+        episodeCard.appendChild(vipBadge);
+      }
+      
+      episodeCard.appendChild(numberDisplay);
+      episodeGrid.appendChild(episodeCard);
     });
+    
+    moreEpisodesList.appendChild(episodeGrid);
     
   } catch (error) {
     console.error('Error loading more episodes:', error);
