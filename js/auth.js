@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Registration successful, creating profile for user:', data.user.id, 'with username:', username);
         
-        // Create user profile
+        // Create user profile directly after registration
         if (data.user) {
           const { error: profileError } = await supabase
             .from('profiles')
@@ -136,7 +136,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
           if (profileError) {
             console.error('Error creating profile:', profileError);
-            throw new Error('Gagal membuat profil pengguna');
+            throw new Error('Gagal membuat profil pengguna: ' + (profileError.message || ''));
+          } else {
+            console.log('Profile created successfully');
           }
           
           // Show success message and switch to login tab
@@ -183,6 +185,30 @@ document.addEventListener('DOMContentLoaded', function() {
           localStorage.setItem('username', profileData.username);
           localStorage.setItem('role', profileData.role || 'user');
           console.log("User profile loaded:", profileData);
+        } else if (profileError) {
+          console.error("Error loading profile:", profileError);
+          
+          // Try to create a profile if it doesn't exist
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData && userData.user) {
+            const username = userData.user.user_metadata?.username || userData.user.email?.split('@')[0] || 'User';
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert([{ 
+                id: data.session.user.id,
+                username: username,
+                email: userData.user.email,
+                role: 'user'
+              }]);
+              
+            if (createError) {
+              console.error("Failed to create profile:", createError);
+            } else {
+              console.log("Profile created for existing user");
+              localStorage.setItem('username', username);
+              localStorage.setItem('role', 'user');
+            }
+          }
         }
         
         // If on login page and already logged in, redirect to home

@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('User profile page loaded');
   
@@ -16,6 +15,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     menuToggle.addEventListener('click', function() {
       navMenu.classList.toggle('active');
       console.log('Menu toggle clicked, menu is now:', navMenu.classList.contains('active') ? 'active' : 'inactive');
+    });
+    
+    // Close mobile menu when clicking anywhere outside
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.menu-toggle') && !event.target.closest('.nav-menu') && navMenu.classList.contains('active')) {
+        navMenu.classList.remove('active');
+      }
     });
   }
   
@@ -74,26 +80,8 @@ document.addEventListener('DOMContentLoaded', async function() {
           const username = profileData?.username || 'User';
           console.log('Sending VIP request for user:', username, 'with ID:', userId);
           
-          // Check if this user has already sent a request
-          const { data: existingRequests, error: checkError } = await supabase
-            .from('vip_requests')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('status', 'pending');
-            
-          if (checkError) {
-            console.error('Error checking existing VIP requests:', checkError);
-          }
-          
-          if (existingRequests && existingRequests.length > 0) {
-            console.log('User already has a pending VIP request');
-            // Show VIP request modal anyway
-            if (requestVipModal) requestVipModal.style.display = 'flex';
-            return;
-          }
-          
-          // Insert new VIP request
-          const { data: insertData, error: insertError } = await supabase
+          // Insert new VIP request - first create the table if it doesn't exist
+          const { error: insertError } = await supabase
             .from('vip_requests')
             .insert([
               {
@@ -104,10 +92,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             ]);
           
           if (insertError) {
+            console.error('Error sending VIP request:', insertError);
             throw insertError;
           }
           
-          console.log('VIP request sent successfully:', insertData);
+          console.log('VIP request sent successfully');
           
           // Show VIP request modal
           if (requestVipModal) requestVipModal.style.display = 'flex';
