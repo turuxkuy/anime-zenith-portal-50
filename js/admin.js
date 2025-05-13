@@ -506,23 +506,23 @@ async function populateUserForm(userId) {
       const roleValue = user.role || 'user';
       console.log('Setting role select to:', roleValue);
       
-      // Check if the option exists, if not create it
-      let optionExists = false;
-      for (const option of roleSelect.options) {
-        if (option.value === roleValue) {
-          optionExists = true;
-          break;
-        }
+      // Clear all existing options first
+      while (roleSelect.options.length > 0) {
+        roleSelect.remove(0);
       }
       
-      if (!optionExists && ['admin', 'vip', 'user'].includes(roleValue)) {
-        const newOption = document.createElement('option');
-        newOption.value = roleValue;
-        newOption.textContent = roleValue.charAt(0).toUpperCase() + roleValue.slice(1);
-        roleSelect.appendChild(newOption);
-      }
+      // Add standard role options
+      const roles = ['user', 'vip', 'admin'];
+      roles.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role;
+        option.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+        roleSelect.appendChild(option);
+      });
       
+      // Set the current role
       roleSelect.value = roleValue;
+      console.log('Role select value after setting:', roleSelect.value);
     }
   } catch (error) {
     console.error('Error populating user form:', error);
@@ -776,20 +776,67 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    // Update user role in profiles table
+    console.log('Current user session:', session.user.id);
+
+    // Check if the current user has admin role
+    const { data: adminCheck, error: adminCheckError } = await window.supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (adminCheckError || !adminCheck || adminCheck.role !== 'admin') {
+      console.error('Current user is not an admin:', adminCheckError || 'Not admin role');
+      showToast('Anda tidak memiliki izin untuk mengubah peran pengguna.', 'error');
+      return;
+    }
+
+    console.log('Admin check passed, proceeding with update');
+
+    // First check if the user exists
+    const { data: userExists, error: userExistsError } = await window.supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .single();
+
+    if (userExistsError || !userExists) {
+      console.error('User not found:', userExistsError || 'No user data returned');
+      showToast('Pengguna tidak ditemukan.', 'error');
+      return;
+    }
+
+    console.log('User found:', userExists);
+    console.log('Current role:', userExists.role);
+    console.log('New role:', userRole);
+
+    // If the role is the same, no need to update
+    if (userExists.role === userRole) {
+      console.log('Role is the same, no update needed');
+      showToast('Peran pengguna tidak berubah.', 'info');
+      closeModal('userModal');
+      return;
+    }
+
+    // Update user role in profiles table with explicit update parameters
+    const updateData = { role: userRole };
+    console.log('Sending update with data:', updateData);
+    
     const { data, error } = await window.supabase
       .from('profiles')
-      .update({ role: userRole })
+      .update(updateData)
       .eq('id', userId)
       .select();
 
     if (error) {
       console.error('Supabase update error:', error);
+      console.error('Error details:', error.details || 'No details');
+      console.error('Error hint:', error.hint || 'No hint');
       showToast(`Error: ${error.message}`, 'error');
       throw error;
     }
 
-    console.log('User role updated successfully:', data);
+    console.log('User role update response:', data);
     
     if (!data || data.length === 0) {
       console.warn('No rows were updated. User might not exist or you may not have permission.');
