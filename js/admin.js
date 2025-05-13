@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Admin.js loaded");
   
@@ -298,30 +297,49 @@ async function loadUsersList() {
   if (!usersTableBody) return;
 
   try {
+    console.log('Loading users list...');
+    
     const { data: users, error } = await window.supabase
       .from('profiles')
       .select('id, username, email, role, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading users:', error);
+      throw error;
+    }
 
+    console.log(`Loaded ${users.length} users`);
+    
     usersTableBody.innerHTML = '';
-    users.forEach(user => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${user.username}</td>
-        <td>${user.email}</td>
-        <td>${user.role}</td>
-        <td>${new Date(user.created_at).toLocaleDateString()}</td>
-        <td>
-          <button class="edit-button" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
-        </td>
-      `;
-      usersTableBody.appendChild(row);
-    });
+    
+    if (users && users.length > 0) {
+      users.forEach(user => {
+        const row = document.createElement('tr');
+        
+        // Format role as a badge with color
+        const roleBadgeClass = 
+          user.role === 'admin' ? 'status-admin' : 
+          user.role === 'vip' ? 'status-vip' : 
+          'status-regular';
+        
+        row.innerHTML = `
+          <td>${user.username || 'N/A'}</td>
+          <td>${user.email || 'N/A'}</td>
+          <td><span class="status-badge ${roleBadgeClass}">${user.role || 'user'}</span></td>
+          <td>${new Date(user.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="edit-button" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
+          </td>
+        `;
+        usersTableBody.appendChild(row);
+      });
+    } else {
+      usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No users found</td></tr>`;
+    }
   } catch (error) {
     console.error('Error loading users list:', error);
-    showToast('Failed to load users list.', 'error');
+    showToast('Failed to load users list: ' + error.message, 'error');
   }
 }
 
@@ -481,7 +499,31 @@ async function populateUserForm(userId) {
     form.querySelector('#userId').value = user.id;
     form.querySelector('#username').value = user.username || '';
     form.querySelector('#email').value = user.email || '';
-    form.querySelector('#userRole').value = user.role || 'user';
+    
+    // Make sure we're setting the correct value in the dropdown
+    const roleSelect = form.querySelector('#userRole');
+    if (roleSelect) {
+      const roleValue = user.role || 'user';
+      console.log('Setting role select to:', roleValue);
+      
+      // Check if the option exists, if not create it
+      let optionExists = false;
+      for (const option of roleSelect.options) {
+        if (option.value === roleValue) {
+          optionExists = true;
+          break;
+        }
+      }
+      
+      if (!optionExists && ['admin', 'vip', 'user'].includes(roleValue)) {
+        const newOption = document.createElement('option');
+        newOption.value = roleValue;
+        newOption.textContent = roleValue.charAt(0).toUpperCase() + roleValue.slice(1);
+        roleSelect.appendChild(newOption);
+      }
+      
+      roleSelect.value = roleValue;
+    }
   } catch (error) {
     console.error('Error populating user form:', error);
     showToast('Failed to populate user form.', 'error');
@@ -723,6 +765,17 @@ async function handleUserSubmit(event) {
       return;
     }
 
+    // Get the current session to verify authentication
+    const { data: { session } } = await window.supabase.auth.getSession();
+    if (!session) {
+      console.error('No active session found');
+      showToast('Sesi login telah berakhir. Silahkan login kembali.', 'error');
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2000);
+      return;
+    }
+
     // Update user role in profiles table
     const { data, error } = await window.supabase
       .from('profiles')
@@ -737,6 +790,13 @@ async function handleUserSubmit(event) {
     }
 
     console.log('User role updated successfully:', data);
+    
+    if (!data || data.length === 0) {
+      console.warn('No rows were updated. User might not exist or you may not have permission.');
+      showToast('Tidak ada perubahan yang terjadi. Periksa izin atau keberadaan pengguna.', 'warning');
+      return;
+    }
+    
     showToast('Pengguna berhasil diperbarui!', 'success');
     closeModal('userModal');
     loadUsersList();
