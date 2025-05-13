@@ -19,6 +19,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Processing create-user request");
+    
     // Create a Supabase client with the service role key (for admin operations)
     // The service role bypasses RLS policies and should be used carefully
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -27,12 +29,15 @@ serve(async (req) => {
     const body = await req.json();
     const { email, password, username, role = 'user' } = body;
     
+    console.log("Request data:", { email, username, role });
+    
     // Validate inputs
     if (!email || !password || !username) {
       throw new Error('Email, password, and username are required');
     }
     
     // Create the user
+    console.log("Creating user...");
     const { data: userData, error: userError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -42,10 +47,16 @@ serve(async (req) => {
       }
     });
     
-    if (userError) throw userError;
+    if (userError) {
+      console.error("Error creating user:", userError);
+      throw userError;
+    }
+
+    console.log("User created successfully, creating profile...");
 
     // Create or update the user's profile in profiles table
     if (userData?.user) {
+      console.log("Creating profile for user ID:", userData.user.id);
       const { error: profileError } = await supabase.from('profiles').insert({
         id: userData.user.id,
         username,
@@ -53,7 +64,12 @@ serve(async (req) => {
         role
       });
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        throw profileError;
+      }
+      
+      console.log("Profile created successfully");
     }
 
     return new Response(
@@ -67,6 +83,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error("Error in create-user function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

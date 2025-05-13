@@ -106,40 +106,27 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       try {
-        // Register user with Supabase
-        const { data, error } = await supabase.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            data: {
-              username: username
-            }
+        console.log('Calling create-user Edge Function to create user with email:', email, 'and username:', username);
+        
+        // Use the create-user Edge Function instead of direct signUp
+        const { data, error } = await supabase.functions.invoke('create-user', {
+          body: {
+            email: email,
+            password: password,
+            username: username,
+            role: 'user'
           }
         });
         
-        if (error) throw error;
+        console.log('Edge function response:', data, error);
         
-        console.log('Registration successful, creating profile for user:', data.user.id, 'with username:', username);
+        if (error) {
+          console.error('Registration error from Edge Function:', error);
+          throw new Error('Gagal membuat pengguna: ' + (error.message || ''));
+        }
         
-        // Create user profile directly after registration
-        if (data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              { 
-                id: data.user.id,
-                username: username,
-                email: email,
-                role: 'user'
-              }
-            ]);
-            
-          if (profileError) {
-            console.error('Error creating profile:', profileError);
-            throw new Error('Gagal membuat profil pengguna: ' + (profileError.message || ''));
-          } else {
-            console.log('Profile created successfully');
-          }
+        if (data && data.user) {
+          console.log('User created successfully through Edge Function:', data.user);
           
           // Show success message and switch to login tab
           errorElement.textContent = 'Pendaftaran berhasil! Silakan masuk.';
@@ -153,6 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
           setTimeout(() => {
             document.querySelector('.auth-tab[data-tab="login"]').click();
           }, 2000);
+        } else {
+          throw new Error('Respons fungsi tidak valid');
         }
       } catch (error) {
         console.error('Registration error:', error);
