@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Admin.js loaded");
   
@@ -82,6 +83,22 @@ function initializeAdminPanel() {
   const addEpisodeBtn = document.getElementById('addEpisodeBtn');
   if (addEpisodeBtn) {
     addEpisodeBtn.addEventListener('click', () => openModal('episodeModal', 'add'));
+  }
+
+  // Sync buttons functionality
+  const syncDonghuaBtn = document.getElementById('syncDonghuaBtn');
+  if (syncDonghuaBtn) {
+    syncDonghuaBtn.addEventListener('click', loadDonghuaList);
+  }
+
+  const syncEpisodeBtn = document.getElementById('syncEpisodeBtn');
+  if (syncEpisodeBtn) {
+    syncEpisodeBtn.addEventListener('click', loadEpisodeList);
+  }
+
+  const syncUsersBtn = document.getElementById('syncUsersBtn');
+  if (syncUsersBtn) {
+    syncUsersBtn.addEventListener('click', loadUsersList);
   }
 
   // Form submission handling
@@ -297,7 +314,7 @@ async function loadUsersList() {
         <td>${user.role}</td>
         <td>${new Date(user.created_at).toLocaleDateString()}</td>
         <td>
-          <button class="edit-button" data-id="${user.id}" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
+          <button class="edit-button" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
         </td>
       `;
       usersTableBody.appendChild(row);
@@ -308,47 +325,48 @@ async function loadUsersList() {
   }
 }
 
-// Function to open modal
-async function openModal(modalId, action, itemId = null) {
+// Function to open modal - Make it global so it can be called from inline onclick
+window.openModal = async function(modalId, action, itemId = null) {
   const modal = document.getElementById(modalId);
   const overlay = document.getElementById('overlay');
-  const modalTitle = document.getElementById(`${modalId}Title`);
+  const modalTitle = document.getElementById(`${modalId}Title`) || document.querySelector(`#${modalId} h2`);
 
   if (modalId === 'donghuaModal') {
     const form = document.getElementById('donghuaForm');
     if (action === 'add') {
-      modalTitle.textContent = 'Tambah Donghua';
+      if (modalTitle) modalTitle.textContent = 'Tambah Donghua';
       form.reset();
       form.removeAttribute('data-id');
     } else if (action === 'edit' && itemId) {
-      modalTitle.textContent = 'Edit Donghua';
+      if (modalTitle) modalTitle.textContent = 'Edit Donghua';
       form.setAttribute('data-id', itemId);
       await populateDonghuaForm(itemId);
     }
   } else if (modalId === 'episodeModal') {
     const form = document.getElementById('episodeForm');
     if (action === 'add') {
-      modalTitle.textContent = 'Tambah Episode';
+      if (modalTitle) modalTitle.textContent = 'Tambah Episode';
       form.reset();
       form.removeAttribute('data-id');
       // Set default release date to today
       const today = new Date().toISOString().split('T')[0];
       form.querySelector('#releaseDate').value = today;
     } else if (action === 'edit' && itemId) {
-      modalTitle.textContent = 'Edit Episode';
+      if (modalTitle) modalTitle.textContent = 'Edit Episode';
       form.setAttribute('data-id', itemId);
       await populateEpisodeForm(itemId);
     }
   } else if (modalId === 'userModal') {
     const form = document.getElementById('userForm');
     if (action === 'edit' && itemId) {
-      modalTitle.textContent = 'Edit Pengguna';
+      if (modalTitle) modalTitle.textContent = 'Edit Pengguna';
+      form.setAttribute('data-id', itemId);
       await populateUserForm(itemId);
     }
   }
 
-  modal.style.display = 'block';
-  overlay.style.display = 'block';
+  if (modal) modal.style.display = 'block';
+  if (overlay) overlay.style.display = 'block';
 
   const closeModalBtn = modal.querySelector('.close-modal');
   if (closeModalBtn) {
@@ -356,16 +374,18 @@ async function openModal(modalId, action, itemId = null) {
   }
   
   // Also close when clicking outside modal
-  overlay.addEventListener('click', () => closeModal(modalId));
-}
+  if (overlay) {
+    overlay.addEventListener('click', () => closeModal(modalId));
+  }
+};
 
-// Function to close modal
-function closeModal(modalId) {
+// Function to close modal - Make it global
+window.closeModal = function(modalId) {
   const modal = document.getElementById(modalId);
   const overlay = document.getElementById('overlay');
-  modal.style.display = 'none';
-  overlay.style.display = 'none';
-}
+  if (modal) modal.style.display = 'none';
+  if (overlay) overlay.style.display = 'none';
+};
 
 // Function to populate donghua form for editing
 async function populateDonghuaForm(donghuaId) {
@@ -442,19 +462,26 @@ async function populateEpisodeForm(episodeId) {
 // Function to populate user form for editing
 async function populateUserForm(userId) {
   try {
+    console.log('Populating user form for ID:', userId);
+    
     const { data: user, error } = await window.supabase
       .from('profiles')
       .select('id, username, email, role')
       .eq('id', userId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching user data:', error);
+      throw error;
+    }
 
+    console.log('User data retrieved:', user);
+    
     const form = document.getElementById('userForm');
     form.querySelector('#userId').value = user.id;
-    form.querySelector('#username').value = user.username;
-    form.querySelector('#email').value = user.email;
-    form.querySelector('#userRole').value = user.role;
+    form.querySelector('#username').value = user.username || '';
+    form.querySelector('#email').value = user.email || '';
+    form.querySelector('#userRole').value = user.role || 'user';
   } catch (error) {
     console.error('Error populating user form:', error);
     showToast('Failed to populate user form.', 'error');
@@ -688,6 +715,8 @@ async function handleUserSubmit(event) {
     const userId = form.querySelector('#userId').value;
     const userRole = form.querySelector('#userRole').value;
 
+    console.log('Updating user role:', { userId, userRole });
+
     // Validate form fields
     if (!userId || !userRole) {
       showToast('Semua kolom harus diisi!', 'error');
@@ -707,6 +736,7 @@ async function handleUserSubmit(event) {
       throw error;
     }
 
+    console.log('User role updated successfully:', data);
     showToast('Pengguna berhasil diperbarui!', 'success');
     closeModal('userModal');
     loadUsersList();
@@ -717,7 +747,7 @@ async function handleUserSubmit(event) {
 }
 
 // Function to delete donghua
-async function deleteDonghua(donghuaId) {
+window.deleteDonghua = async function(donghuaId) {
   if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
     try {
       const { error } = await window.supabase
@@ -734,10 +764,10 @@ async function deleteDonghua(donghuaId) {
       showToast('Failed to delete donghua.', 'error');
     }
   }
-}
+};
 
 // Function to delete episode
-async function deleteEpisode(episodeId) {
+window.deleteEpisode = async function(episodeId) {
   if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
     try {
       console.log('Deleting episode with ID:', episodeId);
@@ -760,7 +790,7 @@ async function deleteEpisode(episodeId) {
       showToast('Failed to delete episode: ' + error.message, 'error');
     }
   }
-}
+};
 
 // Function to load donghua options for episode form
 async function loadDonghuaOptions() {
