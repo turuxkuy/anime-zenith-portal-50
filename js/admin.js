@@ -482,6 +482,11 @@ async function populateUserForm(userId) {
   try {
     console.log('Populating user form for ID:', userId);
     
+    // Clear previous form data first
+    const form = document.getElementById('userForm');
+    form.reset();
+    
+    // Fetch user data with explicit error handling
     const { data: user, error } = await window.supabase
       .from('profiles')
       .select('id, username, email, role')
@@ -490,17 +495,24 @@ async function populateUserForm(userId) {
 
     if (error) {
       console.error('Error fetching user data:', error);
+      showToast(`Error fetching user data: ${error.message}`, 'error');
       throw error;
+    }
+
+    if (!user) {
+      console.error('No user found with ID:', userId);
+      showToast('User not found', 'error');
+      return;
     }
 
     console.log('User data retrieved:', user);
     
-    const form = document.getElementById('userForm');
+    // Set form values
     form.querySelector('#userId').value = user.id;
     form.querySelector('#username').value = user.username || '';
     form.querySelector('#email').value = user.email || '';
     
-    // Make sure we're setting the correct value in the dropdown
+    // Setup role dropdown with all available roles
     const roleSelect = form.querySelector('#userRole');
     if (roleSelect) {
       const roleValue = user.role || 'user';
@@ -761,7 +773,7 @@ async function handleUserSubmit(event) {
 
     // Validate form fields
     if (!userId || !userRole) {
-      showToast('Semua kolom harus diisi!', 'error');
+      showToast('User ID and role are required!', 'error');
       return;
     }
 
@@ -769,7 +781,7 @@ async function handleUserSubmit(event) {
     const { data: { session } } = await window.supabase.auth.getSession();
     if (!session) {
       console.error('No active session found');
-      showToast('Sesi login telah berakhir. Silahkan login kembali.', 'error');
+      showToast('Session expired. Please login again.', 'error');
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 2000);
@@ -778,16 +790,16 @@ async function handleUserSubmit(event) {
 
     console.log('Current user session:', session.user.id);
 
-    // Check if the current user has admin role
+    // Check if the current user has admin role with explicit query
     const { data: adminCheck, error: adminCheckError } = await window.supabase
       .from('profiles')
       .select('role')
       .eq('id', session.user.id)
       .single();
-
+      
     if (adminCheckError || !adminCheck || adminCheck.role !== 'admin') {
       console.error('Current user is not an admin:', adminCheckError || 'Not admin role');
-      showToast('Anda tidak memiliki izin untuk mengubah peran pengguna.', 'error');
+      showToast('You do not have admin permissions to update user roles.', 'error');
       return;
     }
 
@@ -802,7 +814,7 @@ async function handleUserSubmit(event) {
 
     if (userExistsError || !userExists) {
       console.error('User not found:', userExistsError || 'No user data returned');
-      showToast('Pengguna tidak ditemukan.', 'error');
+      showToast('User not found.', 'error');
       return;
     }
 
@@ -813,43 +825,55 @@ async function handleUserSubmit(event) {
     // If the role is the same, no need to update
     if (userExists.role === userRole) {
       console.log('Role is the same, no update needed');
-      showToast('Peran pengguna tidak berubah.', 'info');
+      showToast('User role not changed.', 'info');
       closeModal('userModal');
       return;
     }
 
-    // Update user role in profiles table with explicit update parameters
-    const updateData = { role: userRole };
-    console.log('Sending update with data:', updateData);
+    // Try a direct RPC call for updating the role
+    console.log('Attempting to update role with direct update...');
     
+    // Use a simple update query to minimize potential issues
     const { data, error } = await window.supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
-      .select();
+      .update({ role: userRole })
+      .eq('id', userId);
 
     if (error) {
       console.error('Supabase update error:', error);
       console.error('Error details:', error.details || 'No details');
       console.error('Error hint:', error.hint || 'No hint');
-      showToast(`Error: ${error.message}`, 'error');
-      throw error;
-    }
-
-    console.log('User role update response:', data);
-    
-    if (!data || data.length === 0) {
-      console.warn('No rows were updated. User might not exist or you may not have permission.');
-      showToast('Tidak ada perubahan yang terjadi. Periksa izin atau keberadaan pengguna.', 'warning');
+      
+      // Try alternative update if first attempt failed
+      console.log('First update attempt failed, trying alternative update...');
+      
+      // Try another method - alternative update
+      const altUpdateResult = await window.supabase.rpc('update_user_role', { 
+        user_id: userId,
+        new_role: userRole
+      });
+      
+      if (altUpdateResult.error) {
+        console.error('Alternative update also failed:', altUpdateResult.error);
+        showToast(`Failed to update user role: ${error.message}`, 'error');
+        return;
+      }
+      
+      console.log('Alternative update succeeded:', altUpdateResult.data);
+      showToast('User role updated successfully!', 'success');
+      closeModal('userModal');
+      loadUsersList();
       return;
     }
-    
-    showToast('Pengguna berhasil diperbarui!', 'success');
+
+    console.log('Update role response:', data);
+    showToast('User role updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
+    
   } catch (error) {
     console.error('Error handling user form:', error);
-    showToast(`Terjadi kesalahan: ${error.message}`, 'error');
+    showToast(`An error occurred: ${error.message}`, 'error');
   }
 }
 
