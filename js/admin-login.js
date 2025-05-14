@@ -1,88 +1,79 @@
 
+// Here we'll create a proper admin login script
 document.addEventListener('DOMContentLoaded', function() {
-  console.log("Admin login page loaded");
-
-  // Get the admin login form
+  console.log("Admin login script loaded");
+  
   const adminLoginForm = document.getElementById('adminLoginForm');
   const adminLoginError = document.getElementById('adminLoginError');
-
+  
   if (adminLoginForm) {
     adminLoginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       
-      const email = document.getElementById('adminEmail').value;
-      const password = document.getElementById('adminPassword').value;
+      // Clear previous errors
+      if (adminLoginError) adminLoginError.textContent = '';
+      
+      const email = adminLoginForm.querySelector('#adminEmail').value;
+      const password = adminLoginForm.querySelector('#adminPassword').value;
+      
+      if (!email || !password) {
+        if (adminLoginError) adminLoginError.textContent = 'Email dan password wajib diisi.';
+        return;
+      }
       
       try {
-        // Clear any previous errors
-        adminLoginError.textContent = '';
+        console.log('Attempting admin login with:', { email });
         
-        // Attempt to sign in
-        const { data: { session }, error } = await supabase.auth.signInWithPassword({
-          email: email,
+        // First, authenticate with Supabase
+        const { data, error } = await window.supabase.auth.signInWithPassword({
+          email: email, 
           password: password
         });
         
-        if (error) throw error;
-        
-        if (!session) {
-          throw new Error('No session returned');
+        if (error) {
+          console.error('Login error:', error);
+          adminLoginError.textContent = `Login gagal: ${error.message}`;
+          return;
         }
         
-        console.log("Login successful, getting user profile");
+        if (!data.user) {
+          adminLoginError.textContent = 'Login gagal: User tidak ditemukan';
+          return;
+        }
         
-        // Check if user is an admin
-        const { data: profile, error: profileError } = await supabase
+        console.log('Authentication successful, checking admin role');
+        
+        // Then check if they have admin role
+        const { data: profileData, error: profileError } = await window.supabase
           .from('profiles')
           .select('role')
-          .eq('id', session.user.id)
+          .eq('id', data.user.id)
           .single();
-        
-        if (profileError) throw profileError;
-        
-        if (!profile || profile.role !== 'admin') {
-          // User is not an admin, sign them out
-          await supabase.auth.signOut();
-          throw new Error('Anda tidak memiliki akses admin');
+          
+        if (profileError || !profileData) {
+          console.error('Error fetching profile:', profileError);
+          adminLoginError.textContent = 'Login gagal: Tidak dapat memverifikasi profil pengguna';
+          await window.supabase.auth.signOut();
+          return;
         }
         
-        // Store admin status in localStorage for client-side checks
-        localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('role', profile.role);
+        console.log('User role:', profileData.role);
         
-        // Redirect to admin page
+        if (profileData.role !== 'admin') {
+          console.warn('Non-admin tried to access admin page:', email);
+          adminLoginError.textContent = 'Akses ditolak: Anda bukan administrator';
+          await window.supabase.auth.signOut();
+          return;
+        }
+        
+        // Admin login successful, redirect to admin panel
+        console.log('Admin authentication successful, redirecting to admin panel');
         window.location.href = 'admin.html';
-      } catch (error) {
-        console.error('Login failed:', error);
-        adminLoginError.textContent = error.message || 'Login gagal, silahkan coba kembali';
+        
+      } catch (err) {
+        console.error('Unexpected error during login:', err);
+        adminLoginError.textContent = `Terjadi kesalahan: ${err.message}`;
       }
     });
-  }
-  
-  // Auto redirect if already logged in as admin
-  checkAdminAuth().then(isAdmin => {
-    if (isAdmin) {
-      window.location.href = 'admin.html';
-    }
-  });
-  
-  // Function to check if user is admin
-  async function checkAdminAuth() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) return false;
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      
-      return profile?.role === 'admin';
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
   }
 });
