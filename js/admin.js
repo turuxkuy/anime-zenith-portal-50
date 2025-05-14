@@ -530,7 +530,7 @@ async function populateUserForm(userId) {
         option.value = role;
         option.textContent = role.charAt(0).toUpperCase() + role.slice(1);
         roleSelect.appendChild(option);
-      });
+      }
       
       // Set the current role
       roleSelect.value = roleValue;
@@ -783,7 +783,7 @@ async function handleUserSubmit(event) {
       console.error('Session error:', sessionError || 'No active session');
       showToast('Session expired. Please login again.', 'error');
       setTimeout(() => {
-        window.location.href = 'login.html';
+        window.location.href = 'login-admin.html';
       }, 2000);
       return;
     }
@@ -803,7 +803,7 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    console.log('Admin check passed, proceeding with update');
+    console.log('Admin check passed, proceeding with edge function call');
 
     // First check if the user exists
     const { data: userExists, error: userExistsError } = await window.supabase
@@ -821,80 +821,38 @@ async function handleUserSubmit(event) {
     console.log('User found:', userExists);
     console.log('Current role:', userExists.role);
     console.log('New role:', userRole);
-
-    // Attempt method 1: Direct update with explicit return
-    console.log('Attempt 1: Direct update with explicit return');
     
-    const updateResult = await window.supabase
-      .from('profiles')
-      .update({ role: userRole })
-      .eq('id', userId)
-      .select();
+    // Call the edge function to update the user role
+    const supabaseUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co';
     
-    console.log('Update response:', updateResult);
+    // Show loading toast
+    showToast('Updating user role...', 'info');
     
-    if (!updateResult.error) {
-      console.log('Role updated successfully!');
-      showToast('User role updated successfully!', 'success');
-      closeModal('userModal');
-      loadUsersList();
-      return;
-    }
-    
-    console.error('Update failed:', updateResult.error);
-    
-    // Attempt method 2: Use service role key if available
-    // Note: This is just for debugging purposes to isolate if it's a permission issue
-    console.log('Attempt 2: Using upsert method');
-    
-    const upsertResult = await window.supabase
-      .from('profiles')
-      .upsert({ 
-        id: userId, 
-        role: userRole 
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-user-role`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        userId: userId,
+        newRole: userRole,
+        adminId: session.user.id
       })
-      .select();
+    });
     
-    console.log('Upsert response:', upsertResult);
+    const result = await response.json();
     
-    if (!upsertResult.error) {
-      console.log('Role updated successfully via upsert!');
-      showToast('User role updated successfully!', 'success');
-      closeModal('userModal');
-      loadUsersList();
+    if (!response.ok) {
+      console.error('Edge function error:', result);
+      showToast(`Failed to update user role: ${result.error || 'Unknown error'}`, 'error');
       return;
     }
     
-    console.error('Upsert failed:', upsertResult.error);
-    
-    // Last attempt: Direct SQL via function call
-    console.log('Attempt 3: Raw SQL via function');
-    
-    // Try updating via RPC call (if available)
-    try {
-      const { data: rpcResult, error: rpcError } = await window.supabase
-        .rpc('update_user_role', {
-          user_id: userId,
-          new_role: userRole
-        });
-      
-      console.log('RPC result:', rpcResult);
-      
-      if (!rpcError) {
-        console.log('Role updated successfully via RPC!');
-        showToast('User role updated successfully!', 'success');
-        closeModal('userModal');
-        loadUsersList();
-        return;
-      }
-      
-      console.error('RPC failed:', rpcError);
-    } catch (rpcCatchError) {
-      console.error('RPC error caught:', rpcCatchError);
-    }
-    
-    // If all methods fail, report to user
-    showToast('Could not update user role. Please check database permissions.', 'error');
+    console.log('Role updated successfully via edge function:', result);
+    showToast('User role updated successfully!', 'success');
+    closeModal('userModal');
+    loadUsersList();
 
   } catch (error) {
     console.error('Error handling user form:', error);
