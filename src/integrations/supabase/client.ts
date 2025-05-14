@@ -16,10 +16,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     storageKey: 'zenith-donghua-auth'
   },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
+  db: {
+    schema: 'public'
   },
   global: {
     headers: {

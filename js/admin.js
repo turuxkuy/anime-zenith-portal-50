@@ -778,9 +778,9 @@ async function handleUserSubmit(event) {
     }
 
     // Get the current session to verify authentication
-    const { data: { session } } = await window.supabase.auth.getSession();
-    if (!session) {
-      console.error('No active session found');
+    const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error('Session error:', sessionError || 'No active session');
       showToast('Session expired. Please login again.', 'error');
       setTimeout(() => {
         window.location.href = 'login.html';
@@ -830,47 +830,85 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    // Try a direct RPC call for updating the role
-    console.log('Attempting to update role with direct update...');
+    // First attempt: Direct update with debug logging - verbose version
+    console.log('Attempting direct update with detailed logging...');
     
-    // Use a simple update query to minimize potential issues
-    const { data, error } = await window.supabase
+    const updateResult = await window.supabase
       .from('profiles')
       .update({ role: userRole })
-      .eq('id', userId);
-
-    if (error) {
-      console.error('Supabase update error:', error);
-      console.error('Error details:', error.details || 'No details');
-      console.error('Error hint:', error.hint || 'No hint');
+      .eq('id', userId)
+      .select();
       
-      // Try alternative update if first attempt failed
-      console.log('First update attempt failed, trying alternative update...');
+    console.log('Update response:', JSON.stringify(updateResult));
+    
+    if (updateResult.error) {
+      console.error('Update error details:', updateResult.error);
+      console.error('Error message:', updateResult.error.message);
+      console.error('Error details:', updateResult.error.details);
       
-      // Try another method - alternative update
-      const altUpdateResult = await window.supabase.rpc('update_user_role', { 
-        user_id: userId,
-        new_role: userRole
-      });
+      // Second attempt: Try with different approach
+      console.log('First update failed, trying with upsert...');
       
-      if (altUpdateResult.error) {
-        console.error('Alternative update also failed:', altUpdateResult.error);
-        showToast(`Failed to update user role: ${error.message}`, 'error');
+      const upsertResult = await window.supabase
+        .from('profiles')
+        .upsert({ 
+          id: userId,
+          role: userRole 
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false
+        })
+        .select();
+        
+      console.log('Upsert response:', JSON.stringify(upsertResult));
+      
+      if (upsertResult.error) {
+        console.error('Upsert also failed:', upsertResult.error);
+        
+        // Third attempt: Try with explicit SQL via RPC (if available)
+        console.log('Trying final approach with RPC call...');
+        
+        try {
+          // Try another method via RPC function
+          const rpcResult = await window.supabase.rpc('update_user_role', {
+            p_user_id: userId,
+            p_role: userRole
+          });
+          
+          console.log('RPC result:', JSON.stringify(rpcResult));
+          
+          if (rpcResult.error) {
+            console.error('RPC call failed:', rpcResult.error);
+            showToast(`Failed to update user role: ${updateResult.error.message}`, 'error');
+            return;
+          }
+          
+          // If we get here, RPC worked
+          console.log('Role updated successfully via RPC!');
+          showToast('User role updated successfully!', 'success');
+          closeModal('userModal');
+          loadUsersList();
+          return;
+        } catch (rpcError) {
+          console.error('RPC call exception:', rpcError);
+          showToast(`An error occurred: ${rpcError.message}`, 'error');
+          return;
+        }
+      } else {
+        // Upsert worked
+        console.log('Role updated successfully via upsert!');
+        showToast('User role updated successfully!', 'success');
+        closeModal('userModal');
+        loadUsersList();
         return;
       }
-      
-      console.log('Alternative update succeeded:', altUpdateResult.data);
+    } else {
+      // First update worked
+      console.log('Role updated successfully via direct update!');
       showToast('User role updated successfully!', 'success');
       closeModal('userModal');
       loadUsersList();
-      return;
     }
-
-    console.log('Update role response:', data);
-    showToast('User role updated successfully!', 'success');
-    closeModal('userModal');
-    loadUsersList();
-    
   } catch (error) {
     console.error('Error handling user form:', error);
     showToast(`An error occurred: ${error.message}`, 'error');
