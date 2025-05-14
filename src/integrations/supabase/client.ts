@@ -23,7 +23,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation' // This ensures Supabase returns updated rows
     }
   }
 });

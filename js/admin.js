@@ -822,93 +822,80 @@ async function handleUserSubmit(event) {
     console.log('Current role:', userExists.role);
     console.log('New role:', userRole);
 
-    // If the role is the same, no need to update
-    if (userExists.role === userRole) {
-      console.log('Role is the same, no update needed');
-      showToast('User role not changed.', 'info');
-      closeModal('userModal');
-      return;
-    }
-
-    // First attempt: Direct update with debug logging - verbose version
-    console.log('Attempting direct update with detailed logging...');
+    // Attempt method 1: Direct update with explicit return
+    console.log('Attempt 1: Direct update with explicit return');
     
     const updateResult = await window.supabase
       .from('profiles')
       .update({ role: userRole })
       .eq('id', userId)
       .select();
-      
-    console.log('Update response:', JSON.stringify(updateResult));
     
-    if (updateResult.error) {
-      console.error('Update error details:', updateResult.error);
-      console.error('Error message:', updateResult.error.message);
-      console.error('Error details:', updateResult.error.details);
+    console.log('Update response:', updateResult);
+    
+    if (!updateResult.error) {
+      console.log('Role updated successfully!');
+      showToast('User role updated successfully!', 'success');
+      closeModal('userModal');
+      loadUsersList();
+      return;
+    }
+    
+    console.error('Update failed:', updateResult.error);
+    
+    // Attempt method 2: Use service role key if available
+    // Note: This is just for debugging purposes to isolate if it's a permission issue
+    console.log('Attempt 2: Using upsert method');
+    
+    const upsertResult = await window.supabase
+      .from('profiles')
+      .upsert({ 
+        id: userId, 
+        role: userRole 
+      })
+      .select();
+    
+    console.log('Upsert response:', upsertResult);
+    
+    if (!upsertResult.error) {
+      console.log('Role updated successfully via upsert!');
+      showToast('User role updated successfully!', 'success');
+      closeModal('userModal');
+      loadUsersList();
+      return;
+    }
+    
+    console.error('Upsert failed:', upsertResult.error);
+    
+    // Last attempt: Direct SQL via function call
+    console.log('Attempt 3: Raw SQL via function');
+    
+    // Try updating via RPC call (if available)
+    try {
+      const { data: rpcResult, error: rpcError } = await window.supabase
+        .rpc('update_user_role', {
+          user_id: userId,
+          new_role: userRole
+        });
       
-      // Second attempt: Try with different approach
-      console.log('First update failed, trying with upsert...');
+      console.log('RPC result:', rpcResult);
       
-      const upsertResult = await window.supabase
-        .from('profiles')
-        .upsert({ 
-          id: userId,
-          role: userRole 
-        }, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
-        })
-        .select();
-        
-      console.log('Upsert response:', JSON.stringify(upsertResult));
-      
-      if (upsertResult.error) {
-        console.error('Upsert also failed:', upsertResult.error);
-        
-        // Third attempt: Try with explicit SQL via RPC (if available)
-        console.log('Trying final approach with RPC call...');
-        
-        try {
-          // Try another method via RPC function
-          const rpcResult = await window.supabase.rpc('update_user_role', {
-            p_user_id: userId,
-            p_role: userRole
-          });
-          
-          console.log('RPC result:', JSON.stringify(rpcResult));
-          
-          if (rpcResult.error) {
-            console.error('RPC call failed:', rpcResult.error);
-            showToast(`Failed to update user role: ${updateResult.error.message}`, 'error');
-            return;
-          }
-          
-          // If we get here, RPC worked
-          console.log('Role updated successfully via RPC!');
-          showToast('User role updated successfully!', 'success');
-          closeModal('userModal');
-          loadUsersList();
-          return;
-        } catch (rpcError) {
-          console.error('RPC call exception:', rpcError);
-          showToast(`An error occurred: ${rpcError.message}`, 'error');
-          return;
-        }
-      } else {
-        // Upsert worked
-        console.log('Role updated successfully via upsert!');
+      if (!rpcError) {
+        console.log('Role updated successfully via RPC!');
         showToast('User role updated successfully!', 'success');
         closeModal('userModal');
         loadUsersList();
         return;
       }
-    } else {
-      // First update worked
-      console.log('Role updated successfully via direct update!');
-      showToast('User role updated successfully!', 'success');
-      closeModal('userModal');
-      loadUsersList();
+      
+      console.error('RPC failed:', rpcError);
+    } catch (rpcCatchError) {
+      console.error('RPC error caught:', rpcCatchError);
     }
+    
+    // If all methods fail, report to user
+    showToast('Could not update user role. Please check database permissions.', 'error');
+
   } catch (error) {
     console.error('Error handling user form:', error);
     showToast(`An error occurred: ${error.message}`, 'error');
