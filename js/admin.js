@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Admin.js loaded");
   
@@ -24,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(isAdmin => {
       if (!isAdmin) {
         // Redirect to login page if not admin
-        window.location.href = 'login.html';
+        window.location.href = 'login-admin.html';
         return;
       }
 
@@ -530,7 +531,7 @@ async function populateUserForm(userId) {
         option.value = role;
         option.textContent = role.charAt(0).toUpperCase() + role.slice(1);
         roleSelect.appendChild(option);
-      }
+      });
       
       // Set the current role
       roleSelect.value = roleValue;
