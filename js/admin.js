@@ -654,7 +654,9 @@ async function populateUserForm(userId) {
           const expirationDateInput = document.getElementById('expirationDate');
           if (expirationDateInput) {
             if (user.expiration_date) {
-              const formattedDate = new Date(user.expiration_date).toISOString().split('T')[0];
+              const expDate = new Date(user.expiration_date);
+              // Format date to YYYY-MM-DD for input field
+              const formattedDate = expDate.toISOString().split('T')[0];
               expirationDateInput.value = formattedDate;
             } else {
               // Set default expiration to 30 days from now
@@ -900,8 +902,20 @@ async function handleUserSubmit(event) {
     const form = event.target;
     const userId = form.querySelector('#userId').value;
     const userRole = form.querySelector('#userRole').value;
+    let expirationDate = null;
+    
+    // Get expiration date if user role is VIP
+    if (userRole === 'vip') {
+      const expirationInput = form.querySelector('#expirationDate');
+      if (expirationInput && expirationInput.value) {
+        // Add time to the date (23:59:59) to make expiration at end of day
+        const dateObj = new Date(expirationInput.value);
+        dateObj.setHours(23, 59, 59);
+        expirationDate = dateObj.toISOString();
+      }
+    }
 
-    console.log('Updating user role:', { userId, userRole });
+    console.log('Updating user:', { userId, userRole, expirationDate });
 
     // Validate form fields
     if (!userId || !userRole) {
@@ -935,7 +949,7 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    console.log('Admin check passed, proceeding with edge function call');
+    console.log('Admin check passed, proceeding with update');
 
     // First check if the user exists
     const { data: userExists, error: userExistsError } = await window.supabase
@@ -954,35 +968,33 @@ async function handleUserSubmit(event) {
     console.log('Current role:', userExists.role);
     console.log('New role:', userRole);
     
-    // Call the edge function to update the user role
-    const supabaseUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co';
+    // Update the user profile directly with role and expiration date
+    showToast('Updating user profile...', 'info');
     
-    // Show loading toast
-    showToast('Updating user role...', 'info');
+    const updateData = { 
+      role: userRole 
+    };
     
-    const response = await fetch(`${supabaseUrl}/functions/v1/update-user-role`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        userId: userId,
-        newRole: userRole,
-        adminId: session.user.id
-      })
-    });
+    // Only add expiration_date if role is VIP
+    if (userRole === 'vip') {
+      updateData.expiration_date = expirationDate;
+    } else {
+      updateData.expiration_date = null; // Clear expiration date for non-VIP users
+    }
     
-    const result = await response.json();
+    const { data: updateResult, error: updateError } = await window.supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId);
     
-    if (!response.ok) {
-      console.error('Edge function error:', result);
-      showToast(`Failed to update user role: ${result.error || 'Unknown error'}`, 'error');
+    if (updateError) {
+      console.error('Error updating user profile:', updateError);
+      showToast(`Failed to update user: ${updateError.message}`, 'error');
       return;
     }
     
-    console.log('Role updated successfully via edge function:', result);
-    showToast('User role updated successfully!', 'success');
+    console.log('User updated successfully');
+    showToast('User profile updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
 
@@ -1229,7 +1241,7 @@ window.openExtendVipModal = async function(userId) {
     const newDate = new Date(baseDate);
     newDate.setDate(newDate.getDate() + parseInt(extensionPeriod));
     form.querySelector('#newExpiration').value = newDate.toLocaleDateString() + ' ' + 
-                                               newDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                                              newDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     
     // Show modal
     if (extendVipModal) extendVipModal.style.display = 'block';
