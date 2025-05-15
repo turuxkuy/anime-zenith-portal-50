@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -49,6 +50,10 @@
         <li class="admin-menu-item" data-page="users">
           <i class="fas fa-users"></i>
           <span>Pengguna</span>
+        </li>
+        <li class="admin-menu-item" data-page="vip-management">
+          <i class="fas fa-crown"></i>
+          <span>VIP Management</span>
         </li>
         <li class="admin-menu-item" id="logoutBtn">
           <i class="fas fa-sign-out-alt"></i>
@@ -265,6 +270,7 @@
       <div class="admin-page" id="users">
         <div class="action-bar">
           <button class="sync-button" id="syncUsersBtn"><i class="fas fa-sync-alt"></i> Sinkronisasi</button>
+          <button class="action-button" id="checkExpirationsBtn"><i class="fas fa-clock"></i> Check VIP Expirations</button>
         </div>
         <div class="admin-table-container">
           <table class="admin-table">
@@ -305,7 +311,68 @@
                   <option value="admin">Admin</option>
                 </select>
               </div>
+              <div class="form-group vip-expiration-group" style="display: none;">
+                <label for="expiration">VIP Expiration Date</label>
+                <input type="date" id="expirationDate" name="expirationDate">
+              </div>
               <button type="submit" class="submit-button">Perbarui</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-page" id="vip-management">
+        <div class="action-bar">
+          <button class="sync-button" id="syncVipBtn"><i class="fas fa-sync-alt"></i> Refresh VIP List</button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>VIP Since</th>
+                <th>Expiration Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="vipTableBody">
+              <!-- VIP users data will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal" id="extendVipModal">
+          <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Extend VIP Membership</h2>
+            <form id="extendVipForm">
+              <input type="hidden" id="extendVipUserId" name="extendVipUserId">
+              <div class="form-group">
+                <label for="vipUsername">Username</label>
+                <input type="text" id="vipUsername" name="vipUsername" readonly>
+              </div>
+              <div class="form-group">
+                <label for="currentExpiration">Current Expiration</label>
+                <input type="text" id="currentExpiration" name="currentExpiration" readonly>
+              </div>
+              <div class="form-group">
+                <label for="extensionPeriod">Extension Period</label>
+                <select id="extensionPeriod" name="extensionPeriod">
+                  <option value="7">7 days</option>
+                  <option value="30" selected>30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                  <option value="365">365 days</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="newExpiration">New Expiration Date</label>
+                <input type="text" id="newExpiration" name="newExpiration" readonly>
+              </div>
+              <button type="submit" class="submit-button">Extend VIP</button>
             </form>
           </div>
         </div>

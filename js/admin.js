@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Admin.js loaded");
   
@@ -72,6 +71,7 @@ function initializeAdminPanel() {
   loadDonghuaList();
   loadEpisodeList();
   loadUsersList();
+  loadVipList();
 
   // Donghua modal functionality
   const addDonghuaBtn = document.getElementById('addDonghuaBtn');
@@ -115,6 +115,11 @@ function initializeAdminPanel() {
   const userForm = document.getElementById('userForm');
   if (userForm) {
     userForm.addEventListener('submit', handleUserSubmit);
+  }
+
+  const extendVipForm = document.getElementById('extendVipForm');
+  if (extendVipForm) {
+    extendVipForm.addEventListener('submit', handleExtendVipSubmit);
   }
 
   // Image preview functionality
@@ -302,7 +307,7 @@ async function loadUsersList() {
     
     const { data: users, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role, created_at')
+      .select('id, username, email, role, created_at, expiration_date')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -324,10 +329,24 @@ async function loadUsersList() {
           user.role === 'vip' ? 'status-vip' : 
           'status-regular';
         
+        // Add expiration info to the status badge if user is VIP
+        let statusText = user.role || 'user';
+        if (user.role === 'vip' && user.expiration_date) {
+          const expirationDate = new Date(user.expiration_date);
+          const today = new Date();
+          const daysRemaining = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
+          
+          if (daysRemaining > 0) {
+            statusText = `VIP (${daysRemaining} days left)`;
+          } else {
+            statusText = `VIP (expired)`;
+          }
+        }
+        
         row.innerHTML = `
           <td>${user.username || 'N/A'}</td>
           <td>${user.email || 'N/A'}</td>
-          <td><span class="status-badge ${roleBadgeClass}">${user.role || 'user'}</span></td>
+          <td><span class="status-badge ${roleBadgeClass}">${statusText}</span></td>
           <td>${new Date(user.created_at).toLocaleDateString()}</td>
           <td>
             <button class="edit-button" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
@@ -341,6 +360,87 @@ async function loadUsersList() {
   } catch (error) {
     console.error('Error loading users list:', error);
     showToast('Failed to load users list: ' + error.message, 'error');
+  }
+}
+
+// Function to load VIP users list
+async function loadVipList() {
+  const vipTableBody = document.getElementById('vipTableBody');
+  if (!vipTableBody) return;
+
+  try {
+    console.log('Loading VIP users list...');
+    
+    const { data: vipUsers, error } = await window.supabase
+      .from('profiles')
+      .select('id, username, email, role, created_at, expiration_date')
+      .eq('role', 'vip')
+      .order('expiration_date', { ascending: true });
+
+    if (error) {
+      console.error('Error loading VIP users:', error);
+      throw error;
+    }
+
+    console.log(`Loaded ${vipUsers.length} VIP users`);
+    
+    vipTableBody.innerHTML = '';
+    
+    if (vipUsers && vipUsers.length > 0) {
+      vipUsers.forEach(user => {
+        const row = document.createElement('tr');
+        
+        // Format dates
+        const createdDate = new Date(user.created_at).toLocaleDateString();
+        
+        // Format expiration date and status
+        let expirationText = 'No expiration set';
+        let statusBadgeClass = 'status-regular';
+        let statusText = 'Active';
+        
+        if (user.expiration_date) {
+          const expirationDate = new Date(user.expiration_date);
+          expirationText = expirationDate.toLocaleDateString() + ' ' + 
+                          expirationDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          
+          const today = new Date();
+          if (expirationDate < today) {
+            statusBadgeClass = 'status-expired';
+            statusText = 'Expired';
+          } else {
+            const daysRemaining = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysRemaining <= 3) {
+              statusBadgeClass = 'status-expiring-soon';
+              statusText = `Expiring soon (${daysRemaining} days)`;
+            } else {
+              statusBadgeClass = 'status-vip';
+              statusText = `Active (${daysRemaining} days left)`;
+            }
+          }
+        }
+        
+        row.innerHTML = `
+          <td>${user.username || 'N/A'}</td>
+          <td>${user.email || 'N/A'}</td>
+          <td>${createdDate}</td>
+          <td>${expirationText}</td>
+          <td><span class="status-badge ${statusBadgeClass}">${statusText}</span></td>
+          <td>
+            <div class="table-actions">
+              <button class="edit-btn" onclick="openExtendVipModal('${user.id}')"><i class="fas fa-clock"></i></button>
+              <button class="delete-btn" onclick="revokeVip('${user.id}')"><i class="fas fa-user-minus"></i></button>
+            </div>
+          </td>
+        `;
+        vipTableBody.appendChild(row);
+      });
+    } else {
+      vipTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No VIP users found</td></tr>`;
+    }
+  } catch (error) {
+    console.error('Error loading VIP users list:', error);
+    showToast('Failed to load VIP users list: ' + error.message, 'error');
   }
 }
 
@@ -381,6 +481,13 @@ window.openModal = async function(modalId, action, itemId = null) {
       if (modalTitle) modalTitle.textContent = 'Edit Pengguna';
       form.setAttribute('data-id', itemId);
       await populateUserForm(itemId);
+    }
+  } else if (modalId === 'extendVipModal') {
+    const form = document.getElementById('extendVipForm');
+    if (action === 'add') {
+      if (modalTitle) modalTitle.textContent = 'Tambah Perpanjangan VIP';
+      form.reset();
+      form.removeAttribute('data-id');
     }
   }
 
@@ -490,7 +597,7 @@ async function populateUserForm(userId) {
     // Fetch user data with explicit error handling
     const { data: user, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role')
+      .select('id, username, email, role, expiration_date')
       .eq('id', userId)
       .single();
 
@@ -536,6 +643,30 @@ async function populateUserForm(userId) {
       // Set the current role
       roleSelect.value = roleValue;
       console.log('Role select value after setting:', roleSelect.value);
+      
+      // Show/hide expiration date field based on role
+      const vipExpirationGroup = document.querySelector('.vip-expiration-group');
+      if (vipExpirationGroup) {
+        if (roleValue === 'vip') {
+          vipExpirationGroup.style.display = 'block';
+          
+          // Set the expiration date if available
+          const expirationDateInput = document.getElementById('expirationDate');
+          if (expirationDateInput) {
+            if (user.expiration_date) {
+              const formattedDate = new Date(user.expiration_date).toISOString().split('T')[0];
+              expirationDateInput.value = formattedDate;
+            } else {
+              // Set default expiration to 30 days from now
+              const thirtyDaysLater = new Date();
+              thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+              expirationDateInput.value = thirtyDaysLater.toISOString().split('T')[0];
+            }
+          }
+        } else {
+          vipExpirationGroup.style.display = 'none';
+        }
+      }
     }
   } catch (error) {
     console.error('Error populating user form:', error);
@@ -1050,4 +1181,310 @@ async function checkLoginStatus() {
     console.error('Error checking login status:', error);
     return false;
   }
+}
+
+// Function to open the extend VIP modal
+window.openExtendVipModal = async function(userId) {
+  try {
+    const extendVipModal = document.getElementById('extendVipModal');
+    const overlay = document.getElementById('overlay');
+    
+    // Fetch user data
+    const { data: user, error } = await window.supabase
+      .from('profiles')
+      .select('id, username, expiration_date')
+      .eq('id', userId)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching user data for VIP extension:', error);
+      showToast(`Error: ${error.message}`, 'error');
+      return;
+    }
+    
+    if (!user) {
+      showToast('User not found', 'error');
+      return;
+    }
+    
+    // Populate form
+    const form = document.getElementById('extendVipForm');
+    form.querySelector('#extendVipUserId').value = user.id;
+    form.querySelector('#vipUsername').value = user.username || 'Unknown';
+    
+    // Handle current expiration
+    let baseDate;
+    if (user.expiration_date) {
+      const expirationDate = new Date(user.expiration_date);
+      baseDate = expirationDate;
+      form.querySelector('#currentExpiration').value = expirationDate.toLocaleDateString() + ' ' + 
+                                                       expirationDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } else {
+      baseDate = new Date();
+      form.querySelector('#currentExpiration').value = 'Not set (using current date)';
+    }
+    
+    // Calculate and display new expiration date based on selected period
+    const extensionPeriod = form.querySelector('#extensionPeriod').value;
+    const newDate = new Date(baseDate);
+    newDate.setDate(newDate.getDate() + parseInt(extensionPeriod));
+    form.querySelector('#newExpiration').value = newDate.toLocaleDateString() + ' ' + 
+                                               newDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    // Show modal
+    if (extendVipModal) extendVipModal.style.display = 'block';
+    if (overlay) overlay.style.display = 'block';
+    
+    // Setup close handlers
+    const closeModalBtn = extendVipModal.querySelector('.close-modal');
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', () => closeModal('extendVipModal'));
+    }
+    
+    // Also close when clicking outside modal
+    if (overlay) {
+      overlay.addEventListener('click', () => closeModal('extendVipModal'));
+    }
+  } catch (error) {
+    console.error('Error opening extend VIP modal:', error);
+    showToast('Failed to open modal: ' + error.message, 'error');
+  }
+};
+
+// Function to update the new expiration date preview
+function updateNewExpirationDate() {
+  const form = document.getElementById('extendVipForm');
+  if (!form) return;
+  
+  const currentExpirationText = form.querySelector('#currentExpiration').value;
+  let baseDate;
+  
+  if (currentExpirationText === 'Not set (using current date)') {
+    baseDate = new Date();
+  } else {
+    // Try to parse the date from the displayed text
+    const dateParts = currentExpirationText.split(' ')[0].split('/');
+    if (dateParts.length === 3) {
+      // Assuming MM/DD/YYYY format
+      baseDate = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]);
+    } else {
+      baseDate = new Date(); // Fallback to current date
+    }
+  }
+  
+  const extensionPeriod = form.querySelector('#extensionPeriod').value;
+  const newDate = new Date(baseDate);
+  newDate.setDate(newDate.getDate() + parseInt(extensionPeriod));
+  
+  form.querySelector('#newExpiration').value = newDate.toLocaleDateString() + ' ' + 
+                                              newDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+// Function to handle extend VIP form submission
+async function handleExtendVipSubmit(event) {
+  event.preventDefault();
+  
+  try {
+    const form = event.target;
+    const userId = form.querySelector('#extendVipUserId').value;
+    const extensionPeriod = parseInt(form.querySelector('#extensionPeriod').value);
+    
+    if (!userId || isNaN(extensionPeriod)) {
+      showToast('Invalid form data', 'error');
+      return;
+    }
+    
+    // Get current user data
+    const { data: user, error: fetchError } = await window.supabase
+      .from('profiles')
+      .select('expiration_date')
+      .eq('id', userId)
+      .single();
+      
+    if (fetchError) {
+      console.error('Error fetching user data:', fetchError);
+      showToast(`Error: ${fetchError.message}`, 'error');
+      return;
+    }
+    
+    // Calculate new expiration date
+    let baseDate;
+    if (user.expiration_date) {
+      const currentExpiration = new Date(user.expiration_date);
+      const now = new Date();
+      
+      // If expiration is in the past, start from now
+      baseDate = currentExpiration < now ? now : currentExpiration;
+    } else {
+      baseDate = new Date();
+    }
+    
+    const newExpirationDate = new Date(baseDate);
+    newExpirationDate.setDate(newExpirationDate.getDate() + extensionPeriod);
+    
+    // Update the user
+    const { error: updateError } = await window.supabase
+      .from('profiles')
+      .update({ 
+        role: 'vip',
+        expiration_date: newExpirationDate.toISOString()
+      })
+      .eq('id', userId);
+      
+    if (updateError) {
+      console.error('Error extending VIP status:', updateError);
+      showToast(`Error: ${updateError.message}`, 'error');
+      return;
+    }
+    
+    showToast('VIP status extended successfully!', 'success');
+    closeModal('extendVipModal');
+    loadVipList();
+    loadUsersList();
+    
+  } catch (error) {
+    console.error('Error handling extend VIP form:', error);
+    showToast('Failed to extend VIP status: ' + error.message, 'error');
+  }
+}
+
+// Function to revoke VIP status
+window.revokeVip = async function(userId) {
+  if (confirm('Are you sure you want to revoke VIP status for this user?')) {
+    try {
+      const { error } = await window.supabase
+        .from('profiles')
+        .update({ 
+          role: 'user',
+          expiration_date: null
+        })
+        .eq('id', userId);
+        
+      if (error) {
+        console.error('Error revoking VIP status:', error);
+        showToast(`Error: ${error.message}`, 'error');
+        return;
+      }
+      
+      showToast('VIP status revoked successfully!', 'success');
+      loadVipList();
+      loadUsersList();
+      
+    } catch (error) {
+      console.error('Error revoking VIP status:', error);
+      showToast('Failed to revoke VIP status: ' + error.message, 'error');
+    }
+  }
+};
+
+// Function to check for and downgrade expired VIP users
+async function checkAndDowngradeExpiredVips() {
+  try {
+    showToast('Checking for expired VIP memberships...', 'info');
+    
+    // Get all VIP users with expiration dates
+    const { data: vipUsers, error: fetchError } = await window.supabase
+      .from('profiles')
+      .select('id, username, expiration_date')
+      .eq('role', 'vip')
+      .not('expiration_date', 'is', null);
+      
+    if (fetchError) {
+      console.error('Error fetching VIP users:', fetchError);
+      showToast(`Error: ${fetchError.message}`, 'error');
+      return;
+    }
+    
+    if (!vipUsers || vipUsers.length === 0) {
+      showToast('No VIP users with expiration dates found.', 'info');
+      return;
+    }
+    
+    console.log(`Checking ${vipUsers.length} VIP users for expiration`);
+    
+    const now = new Date();
+    let expiredCount = 0;
+    
+    // Loop through users and check expirations
+    for (const user of vipUsers) {
+      if (user.expiration_date) {
+        const expirationDate = new Date(user.expiration_date);
+        
+        if (expirationDate < now) {
+          console.log(`User ${user.username} (${user.id}) VIP has expired on ${expirationDate.toLocaleString()}`);
+          
+          // Downgrade this user
+          const { error: updateError } = await window.supabase
+            .from('profiles')
+            .update({ 
+              role: 'user',
+              expiration_date: null
+            })
+            .eq('id', user.id);
+            
+          if (updateError) {
+            console.error(`Error downgrading user ${user.id}:`, updateError);
+          } else {
+            expiredCount++;
+          }
+        }
+      }
+    }
+    
+    // Reload user lists
+    loadVipList();
+    loadUsersList();
+    
+    // Show results
+    if (expiredCount > 0) {
+      showToast(`Downgraded ${expiredCount} expired VIP user(s).`, 'success');
+    } else {
+      showToast('No expired VIP memberships found.', 'info');
+    }
+    
+  } catch (error) {
+    console.error('Error checking VIP expirations:', error);
+    showToast('Failed to check VIP expirations: ' + error.message, 'error');
+  }
+}
+
+// VIP role related UI
+const userRoleSelect = document.getElementById('userRole');
+if (userRoleSelect) {
+  userRoleSelect.addEventListener('change', function() {
+    const vipExpirationGroup = document.querySelector('.vip-expiration-group');
+    if (vipExpirationGroup) {
+      if (this.value === 'vip') {
+        vipExpirationGroup.style.display = 'block';
+        
+        // Set default expiration date to 30 days from now if not already set
+        const expirationDateInput = document.getElementById('expirationDate');
+        if (expirationDateInput && !expirationDateInput.value) {
+          const thirtyDaysLater = new Date();
+          thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+          expirationDateInput.value = thirtyDaysLater.toISOString().split('T')[0];
+        }
+      } else {
+        vipExpirationGroup.style.display = 'none';
+      }
+    }
+  });
+}
+
+// Check VIP expirations button
+const checkExpirationsBtn = document.getElementById('checkExpirationsBtn');
+if (checkExpirationsBtn) {
+  checkExpirationsBtn.addEventListener('click', checkAndDowngradeExpiredVips);
+}
+
+// Sync VIP button
+const syncVipBtn = document.getElementById('syncVipBtn');
+if (syncVipBtn) {
+  syncVipBtn.addEventListener('click', loadVipList);
+}
+
+// Extension period change event
+const extensionPeriod = document.getElementById('extensionPeriod');
+if (extensionPeriod) {
+  extensionPeriod.addEventListener('change', updateNewExpirationDate);
 }
