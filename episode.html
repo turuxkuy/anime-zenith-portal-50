@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -96,6 +97,56 @@
       height: 100%;
     }
     
+    /* Improved VIP overlay styling */
+    .vip-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    .vip-message {
+      text-align: center;
+      color: #fff;
+      padding: 2rem;
+      max-width: 90%;
+    }
+    
+    .vip-message h2 {
+      color: #fff;
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .vip-message i.fa-crown {
+      color: #ffd700;
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .vip-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #8a5cf5 0%, #6a3eee 100%);
+      color: #fff;
+      padding: 0.8rem 1.5rem;
+      border-radius: 5px;
+      font-weight: bold;
+      text-decoration: none;
+      margin-top: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    
+    .vip-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(138, 92, 245, 0.4);
+    }
+    
     @media (max-width: 768px) {
       .number-grid {
         grid-template-columns: repeat(6, 1fr);
@@ -103,6 +154,10 @@
       
       .number {
         font-size: 1rem;
+      }
+      
+      .vip-message h2 {
+        font-size: 1.5rem;
       }
     }
     
@@ -113,6 +168,10 @@
       
       .number {
         font-size: 0.9rem;
+      }
+      
+      .vip-message h2 {
+        font-size: 1.2rem;
       }
     }
   </style>
@@ -149,7 +208,7 @@
               <i class="fas fa-crown"></i>
               <h2>Konten VIP</h2>
               <p>Episode ini hanya tersedia untuk pengguna VIP</p>
-              <a href="user.html" class="vip-button">Dapatkan VIP</a>
+              <a href="https://t.me/tencent012" target="_blank" class="vip-button">Dapatkan VIP Sekarang!</a>
             </div>
           </div>
         </div>
