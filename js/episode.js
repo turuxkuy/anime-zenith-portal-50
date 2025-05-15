@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Episode page loaded');
   
@@ -7,7 +6,35 @@ document.addEventListener('DOMContentLoaded', async function() {
   
   // Load episode details
   loadEpisodeDetails();
+  
+  // Fix for mobile menu toggle
+  initMobileMenuToggle();
 });
+
+// Function to initialize mobile menu toggle
+function initMobileMenuToggle() {
+  const menuToggle = document.querySelector('.menu-toggle');
+  const navMenu = document.querySelector('.nav-menu');
+  
+  if (menuToggle && navMenu) {
+    // Use direct onclick instead of addEventListener
+    menuToggle.onclick = function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      navMenu.classList.toggle('active');
+      console.log('Menu toggle clicked, menu is now:', navMenu.classList.contains('active') ? 'active' : 'inactive');
+    };
+    
+    // Close mobile menu when clicking anywhere outside
+    document.addEventListener('click', function(event) {
+      if (!menuToggle.contains(event.target) && !navMenu.contains(event.target) && navMenu.classList.contains('active')) {
+        navMenu.classList.remove('active');
+      }
+    });
+  } else {
+    console.error('Menu toggle or nav menu elements not found');
+  }
+}
 
 // Function to update navigation based on auth status
 async function updateNavigation() {
@@ -152,6 +179,14 @@ async function loadEpisodeDetails() {
         // It's an embed code, sanitize it properly
         console.log("Embedding iframe content:", episode.video_url);
         videoWrapper.innerHTML = episode.video_url;
+      } else if (episode.video_url && episode.video_url.includes('rumble.com/embed')) {
+        // It's a Rumble URL, embed directly
+        console.log("Embedding Rumble video:", episode.video_url);
+        videoWrapper.innerHTML = `
+          <iframe width="100%" height="100%" src="${episode.video_url}" 
+          frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen></iframe>
+        `;
       } else if (episode.video_url && (episode.video_url.includes('youtube.com') || episode.video_url.includes('youtu.be'))) {
         // It's a YouTube URL, convert to embed
         const youtubeId = extractYoutubeId(episode.video_url);
