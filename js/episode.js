@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Episode page loaded');
   
@@ -169,11 +168,11 @@ async function loadEpisodeDetails() {
     
     if (isVip && !hasVipAccess) {
       // Show VIP overlay
-      if (vipOverlay) vipOverlay.style.display = 'flex';
+      vipOverlay.style.display = 'flex';
       videoWrapper.innerHTML = `<div class="video-placeholder"></div>`;
     } else {
       // Show video
-      if (vipOverlay) vipOverlay.style.display = 'none';
+      vipOverlay.style.display = 'none';
       
       // Check if video URL is external (embed) or local
       if (episode.video_url && episode.video_url.includes('<iframe')) {
@@ -307,6 +306,10 @@ async function loadMoreEpisodes(donghuaId, currentEpisodeId) {
       return;
     }
     
+    // Create grid layout for episodes
+    const episodeGrid = document.createElement('div');
+    episodeGrid.className = 'number-grid';
+    
     // Add all episodes to the grid
     episodes.forEach(episode => {
       const episodeCard = document.createElement('a');
@@ -333,8 +336,10 @@ async function loadMoreEpisodes(donghuaId, currentEpisodeId) {
       }
       
       episodeCard.appendChild(numberDisplay);
-      moreEpisodesList.appendChild(episodeCard);
+      episodeGrid.appendChild(episodeCard);
     });
+    
+    moreEpisodesList.appendChild(episodeGrid);
     
   } catch (error) {
     console.error('Error loading more episodes:', error);

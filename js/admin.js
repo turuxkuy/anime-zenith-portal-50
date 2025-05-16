@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Admin.js loaded");
   
@@ -30,9 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Initialize admin panel functionality
       initializeAdminPanel();
-      
-      // Run VIP expiration check
-      checkExpiredVipUsers();
     })
     .catch(error => {
       console.error('Authentication check failed:', error);
@@ -304,7 +302,7 @@ async function loadUsersList() {
     
     const { data: users, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role, created_at, expiration_date')
+      .select('id, username, email, role, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -326,28 +324,10 @@ async function loadUsersList() {
           user.role === 'vip' ? 'status-vip' : 
           'status-regular';
         
-        // Format the status text to include expiration date for VIP users
-        let statusText = user.role || 'user';
-        if (user.role === 'vip' && user.expiration_date) {
-          const expiryDate = new Date(user.expiration_date);
-          const now = new Date();
-          
-          // Check if expired
-          if (expiryDate < now) {
-            statusText = 'VIP (Expired)';
-          } else {
-            // Format the date as DD/MM/YYYY
-            const day = String(expiryDate.getDate()).padStart(2, '0');
-            const month = String(expiryDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-            const year = expiryDate.getFullYear();
-            statusText = `VIP (until ${day}/${month}/${year})`;
-          }
-        }
-        
         row.innerHTML = `
           <td>${user.username || 'N/A'}</td>
           <td>${user.email || 'N/A'}</td>
-          <td><span class="status-badge ${roleBadgeClass}">${statusText}</span></td>
+          <td><span class="status-badge ${roleBadgeClass}">${user.role || 'user'}</span></td>
           <td>${new Date(user.created_at).toLocaleDateString()}</td>
           <td>
             <button class="edit-button" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
@@ -510,7 +490,7 @@ async function populateUserForm(userId) {
     // Fetch user data with explicit error handling
     const { data: user, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role, expiration_date')
+      .select('id, username, email, role')
       .eq('id', userId)
       .single();
 
@@ -556,40 +536,6 @@ async function populateUserForm(userId) {
       // Set the current role
       roleSelect.value = roleValue;
       console.log('Role select value after setting:', roleSelect.value);
-
-      // Show/hide expiration date field based on role
-      const expirationDateGroup = document.getElementById('expirationDateGroup');
-      if (roleValue === 'vip') {
-        expirationDateGroup.style.display = 'block';
-        
-        // Format the date if it exists
-        if (user.expiration_date) {
-          // Convert to local datetime-local format (YYYY-MM-DDThh:mm)
-          const date = new Date(user.expiration_date);
-          const localDateString = date.toISOString().slice(0, 16); // Format as YYYY-MM-DDThh:mm
-          document.getElementById('expirationDate').value = localDateString;
-        } else {
-          document.getElementById('expirationDate').value = '';
-        }
-      } else {
-        expirationDateGroup.style.display = 'none';
-      }
-      
-      // Add role change listener to show/hide expiration date field
-      roleSelect.addEventListener('change', function() {
-        if (this.value === 'vip') {
-          expirationDateGroup.style.display = 'block';
-          
-          // Default to 30 days from now if no date is set and changing to VIP
-          if (!document.getElementById('expirationDate').value) {
-            const thirtyDaysFromNow = new Date();
-            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-            document.getElementById('expirationDate').value = thirtyDaysFromNow.toISOString().slice(0, 16);
-          }
-        } else {
-          expirationDateGroup.style.display = 'none';
-        }
-      });
     }
   } catch (error) {
     console.error('Error populating user form:', error);
@@ -823,16 +769,8 @@ async function handleUserSubmit(event) {
     const form = event.target;
     const userId = form.querySelector('#userId').value;
     const userRole = form.querySelector('#userRole').value;
-    const expirationDateInput = form.querySelector('#expirationDate');
-    let expirationDate = null;
 
     console.log('Updating user role:', { userId, userRole });
-
-    // Handle expiration date if VIP
-    if (userRole === 'vip' && expirationDateInput.value) {
-      expirationDate = new Date(expirationDateInput.value).toISOString();
-      console.log('VIP expiration date:', expirationDate);
-    }
 
     // Validate form fields
     if (!userId || !userRole) {
@@ -853,39 +791,67 @@ async function handleUserSubmit(event) {
 
     console.log('Current user session:', session.user.id);
 
-    // Show loading toast
-    showToast('Updating user...', 'info');
-    
-    // Create update data object
-    const updateData = {
-      role: userRole
-    };
-    
-    // Only add expiration_date for VIP users
-    if (userRole === 'vip') {
-      updateData.expiration_date = expirationDate;
-    } else {
-      // Set expiration_date to null for non-VIP users
-      updateData.expiration_date = null;
-    }
-    
-    console.log('Update data:', updateData);
-    
-    // Direct update approach using Supabase
-    const { data, error } = await window.supabase
+    // Check if the current user has admin role with explicit query
+    const { data: adminCheck, error: adminCheckError } = await window.supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
-      .select();
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
       
-    if (error) {
-      console.error('Error updating user:', error);
-      showToast(`Failed to update user: ${error.message}`, 'error');
+    if (adminCheckError || !adminCheck || adminCheck.role !== 'admin') {
+      console.error('Current user is not an admin:', adminCheckError || 'Not admin role');
+      showToast('You do not have admin permissions to update user roles.', 'error');
+      return;
+    }
+
+    console.log('Admin check passed, proceeding with edge function call');
+
+    // First check if the user exists
+    const { data: userExists, error: userExistsError } = await window.supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .single();
+
+    if (userExistsError || !userExists) {
+      console.error('User not found:', userExistsError || 'No user data returned');
+      showToast('User not found.', 'error');
+      return;
+    }
+
+    console.log('User found:', userExists);
+    console.log('Current role:', userExists.role);
+    console.log('New role:', userRole);
+    
+    // Call the edge function to update the user role
+    const supabaseUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co';
+    
+    // Show loading toast
+    showToast('Updating user role...', 'info');
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/update-user-role`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        userId: userId,
+        newRole: userRole,
+        adminId: session.user.id
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('Edge function error:', result);
+      showToast(`Failed to update user role: ${result.error || 'Unknown error'}`, 'error');
       return;
     }
     
-    console.log('User updated successfully:', data);
-    showToast('User updated successfully!', 'success');
+    console.log('Role updated successfully via edge function:', result);
+    showToast('User role updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
 
@@ -1083,28 +1049,5 @@ async function checkLoginStatus() {
   } catch (error) {
     console.error('Error checking login status:', error);
     return false;
-  }
-}
-
-// Function to check for expired VIP memberships
-async function checkExpiredVipUsers() {
-  try {
-    console.log('Checking for expired VIP memberships...');
-    
-    // Call the database function to update expired VIP users
-    const { data, error } = await window.supabase.rpc('update_expired_vip_status');
-    
-    if (error) {
-      console.error('Error checking VIP expiration:', error);
-      return;
-    }
-    
-    console.log('Expired VIP status check result:', data);
-    
-    if (data && data.updated_count > 0) {
-      showToast(`${data.updated_count} expired VIP memberships have been updated to regular status.`, 'info');
-    }
-  } catch (error) {
-    console.error('Error during VIP expiration check:', error);
   }
 }
