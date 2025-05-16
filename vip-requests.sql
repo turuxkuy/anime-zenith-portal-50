@@ -1,4 +1,5 @@
 
+
 -- This SQL creates the VIP requests table and function
 -- Admin can run this in Supabase SQL Editor
 
@@ -39,5 +40,49 @@ begin
         )
       );
   end if;
+end;
+$$;
+
+-- Add a function to check for VIP requests
+create or replace function public.handle_vip_request(
+  requestId uuid,
+  newStatus text,
+  expirationDays integer default 30
+)
+returns jsonb
+language plpgsql security definer as
+$$
+declare
+  request_record record;
+  expiration_date timestamp with time zone;
+begin
+  -- Get the request record
+  select * into request_record from public.vip_requests where id = requestId;
+  
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'VIP request not found');
+  end if;
+  
+  -- Calculate expiration date if status is approved
+  if newStatus = 'approved' then
+    expiration_date := now() + (expirationDays || ' days')::interval;
+    
+    -- Update the user's role to VIP
+    update public.profiles
+    set role = 'vip', expiration_date = handle_vip_request.expiration_date
+    where id = request_record.user_id;
+  end if;
+  
+  -- Update the request status
+  update public.vip_requests
+  set status = newStatus, updated_at = now()
+  where id = requestId;
+  
+  return jsonb_build_object(
+    'success', true, 
+    'message', 'VIP request ' || newStatus,
+    'user_id', request_record.user_id,
+    'expiration_date', expiration_date
+  );
 end;
 $$;
