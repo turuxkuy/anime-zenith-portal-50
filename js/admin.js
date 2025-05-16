@@ -853,50 +853,25 @@ async function handleUserSubmit(event) {
 
     console.log('Current user session:', session.user.id);
 
-    // Check if the current user has admin role with explicit query
-    const { data: adminCheck, error: adminCheckError } = await window.supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single();
-      
-    if (adminCheckError || !adminCheck || adminCheck.role !== 'admin') {
-      console.error('Current user is not an admin:', adminCheckError || 'Not admin role');
-      showToast('You do not have admin permissions to update user roles.', 'error');
-      return;
-    }
-
-    console.log('Admin check passed, proceeding with update');
-
-    // First check if the user exists
-    const { data: userExists, error: userExistsError } = await window.supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', userId)
-      .single();
-
-    if (userExistsError || !userExists) {
-      console.error('User not found:', userExistsError || 'No user data returned');
-      showToast('User not found.', 'error');
-      return;
-    }
-
-    console.log('User found:', userExists);
-    console.log('Current role:', userExists.role);
-    console.log('New role:', userRole);
-    
-    // Prepare update data
-    const updateData = {
-      role: userRole,
-      expiration_date: userRole === 'vip' ? expirationDate : null // Clear expiration date if not VIP
-    };
-    
-    console.log('Update data:', updateData);
-    
     // Show loading toast
     showToast('Updating user...', 'info');
     
-    // Update the user profile directly
+    // Create update data object
+    const updateData = {
+      role: userRole
+    };
+    
+    // Only add expiration_date for VIP users
+    if (userRole === 'vip') {
+      updateData.expiration_date = expirationDate;
+    } else {
+      // Set expiration_date to null for non-VIP users
+      updateData.expiration_date = null;
+    }
+    
+    console.log('Update data:', updateData);
+    
+    // Direct update approach using Supabase
     const { data, error } = await window.supabase
       .from('profiles')
       .update(updateData)
