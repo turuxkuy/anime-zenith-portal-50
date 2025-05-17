@@ -108,47 +108,90 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         console.log('Calling create-user Edge Function to create user with email:', email, 'and username:', username);
         
-        // Use the create-user Edge Function instead of direct signUp
-        const { data, error } = await supabase.functions.invoke('create-user', {
-          body: {
-            email: email,
-            password: password,
-            username: username,
-            role: 'user'
+        // First try with the Edge Function
+        try {
+          const { data: fnData, error: fnError } = await supabase.functions.invoke('create-user', {
+            body: {
+              email: email,
+              password: password,
+              username: username,
+              role: 'user'
+            }
+          });
+          
+          console.log('Edge function response:', fnData, fnError);
+          
+          if (fnError) {
+            console.warn('Edge function error, falling back to direct signup:', fnError);
+            throw fnError; // Fall back to direct signup
+          }
+          
+          if (fnData && fnData.user) {
+            console.log('User created successfully through Edge Function:', fnData.user);
+            handleSuccessfulRegistration(errorElement, registerForm);
+            return;
+          }
+        } catch (fnCatchError) {
+          console.warn('Failed to use Edge Function, falling back to direct signup:', fnCatchError);
+        }
+        
+        // Fallback: Direct signup if Edge Function fails
+        console.log('Using direct signup as fallback');
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              username: username
+            }
           }
         });
         
-        console.log('Edge function response:', data, error);
-        
-        if (error) {
-          console.error('Registration error from Edge Function:', error);
-          throw new Error('Gagal membuat pengguna: ' + (error.message || ''));
-        }
+        if (error) throw error;
         
         if (data && data.user) {
-          console.log('User created successfully through Edge Function:', data.user);
+          console.log('User created successfully through direct signup:', data.user);
           
-          // Show success message and switch to login tab
-          errorElement.textContent = 'Pendaftaran berhasil! Silakan masuk.';
-          errorElement.style.color = '#4CAF50';
-          errorElement.style.display = 'block';
+          // Create profile entry
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([{
+              id: data.user.id,
+              username: username,
+              email: email,
+              role: 'user'
+            }]);
+            
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+          } else {
+            console.log('Profile created successfully');
+          }
           
-          // Reset form
-          registerForm.reset();
-          
-          // Switch to login tab after 2 seconds
-          setTimeout(() => {
-            document.querySelector('.auth-tab[data-tab="login"]').click();
-          }, 2000);
-        } else {
-          throw new Error('Respons fungsi tidak valid');
+          handleSuccessfulRegistration(errorElement, registerForm);
         }
+        
       } catch (error) {
         console.error('Registration error:', error);
         errorElement.textContent = 'Pendaftaran gagal: ' + (error.message || 'Terjadi kesalahan');
         errorElement.style.display = 'block';
       }
     });
+  }
+  
+  function handleSuccessfulRegistration(errorElement, form) {
+    // Show success message and switch to login tab
+    errorElement.textContent = 'Pendaftaran berhasil! Silakan masuk.';
+    errorElement.style.color = '#4CAF50';
+    errorElement.style.display = 'block';
+    
+    // Reset form
+    form.reset();
+    
+    // Switch to login tab after 2 seconds
+    setTimeout(() => {
+      document.querySelector('.auth-tab[data-tab="login"]').click();
+    }, 2000);
   }
   
   // Check if user is already logged in

@@ -78,20 +78,13 @@ async function updateNavigation() {
         navMenu.appendChild(loginItem);
       }
       
-      // Remove user link if it exists
-      if (hasUserLink) {
-        const userItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
-          li.querySelector('a')?.href.includes('user.html')
-        );
-        if (userItem) userItem.remove();
-      }
+      // Update existing user and admin links to be hidden
+      document.querySelectorAll('.profile-link').forEach(link => {
+        link.style.display = 'none';
+      });
       
-      // Remove admin link if it exists
-      if (hasAdminLink) {
-        const adminItem = Array.from(navMenu.querySelectorAll('li')).find(li => 
-          li.querySelector('a')?.href.includes('admin.html')
-        );
-        if (adminItem) adminItem.remove();
+      if (document.getElementById('adminLink')) {
+        document.getElementById('adminLink').style.display = 'none';
       }
     }
   } catch (error) {
@@ -152,7 +145,7 @@ async function loadDonghuaList() {
       donghuaCard.className = 'donghua-card';
       donghuaCard.setAttribute('data-donghua-id', donghua.id);
       
-      // Check if poster_url is available
+      // Ensure poster_url is properly handled
       const posterUrl = donghua.poster_url || 'images/default-poster.jpg';
       console.log('Using poster URL:', posterUrl);
       
