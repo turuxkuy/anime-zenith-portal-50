@@ -1,4 +1,3 @@
-
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Admin page loaded');
@@ -103,100 +102,72 @@ document.addEventListener('DOMContentLoaded', async function() {
   loadUsersData();
 });
 
-// Function to set up sidebar
+// Function to set up sidebar toggle
 function setupSidebar() {
   const menuToggle = document.getElementById('menuToggle');
-  const adminSidebar = document.getElementById('adminSidebar');
-  const closeSidebar = document.getElementById('closeSidebar');
-  const overlay = document.getElementById('overlay');
+  const sidebar = document.getElementById('sidebar');
   
-  menuToggle.addEventListener('click', function() {
-    adminSidebar.classList.add('active');
-    overlay.classList.add('active');
-  });
-  
-  closeSidebar.addEventListener('click', function() {
-    adminSidebar.classList.remove('active');
-    overlay.classList.remove('active');
-  });
-  
-  overlay.addEventListener('click', function() {
-    adminSidebar.classList.remove('active');
-    overlay.classList.remove('active');
-  });
+  if (menuToggle && sidebar) {
+    menuToggle.addEventListener('click', function() {
+      sidebar.classList.toggle('active');
+    });
+  }
 }
 
-// Function to change admin page
+// Function to change page content
 function changePage(pageId) {
-  // Hide all pages
-  document.querySelectorAll('.admin-page').forEach(page => {
-    page.classList.remove('active');
+  const pages = document.querySelectorAll('.admin-page');
+  pages.forEach(page => {
+    page.style.display = 'none';
   });
   
-  // Show selected page
-  document.getElementById(pageId).classList.add('active');
-  
-  // Update page title
-  document.getElementById('pageTitle').textContent = 
-    pageId === 'dashboard' ? 'Dashboard' :
-    pageId === 'donghua' ? 'Donghua' :
-    pageId === 'episode' ? 'Episode' : 'Pengguna';
-  
-  // Update menu active state
-  document.querySelectorAll('.admin-menu-item').forEach(item => {
-    item.classList.remove('active');
-  });
-  
-  document.querySelector(`.admin-menu-item[data-page="${pageId}"]`).classList.add('active');
-  
-  // Hide sidebar on mobile after page change
-  document.getElementById('adminSidebar').classList.remove('active');
-  document.getElementById('overlay').classList.remove('active');
+  const selectedPage = document.getElementById(pageId);
+  if (selectedPage) {
+    selectedPage.style.display = 'block';
+  }
 }
 
-// Function to load dashboard stats
+// Function to load dashboard statistics
 async function loadDashboardStats() {
   try {
-    // Count donghua
+    // Fetch total number of donghua
     const { count: donghuaCount, error: donghuaError } = await supabase
       .from('donghua')
       .select('*', { count: 'exact', head: true });
     
-    if (!donghuaError) {
-      document.getElementById('totalDonghua').textContent = donghuaCount;
-    }
+    if (donghuaError) throw donghuaError;
     
-    // Count episodes
+    // Fetch total number of episodes
     const { count: episodeCount, error: episodeError } = await supabase
       .from('episodes')
       .select('*', { count: 'exact', head: true });
     
-    if (!episodeError) {
-      document.getElementById('totalEpisodes').textContent = episodeCount;
-    }
+    if (episodeError) throw episodeError;
     
-    // Count users
+    // Fetch total number of users
     const { count: userCount, error: userError } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
     
-    if (!userError) {
-      document.getElementById('totalUsers').textContent = userCount;
-    }
+    if (userError) throw userError;
     
-    // Count VIP users
+    // Fetch total number of VIP users
     const { count: vipCount, error: vipError } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('role', 'vip');
     
-    if (!vipError) {
-      document.getElementById('vipUsers').textContent = vipCount;
-    }
+    if (vipError) throw vipError;
+    
+    // Update the DOM with the statistics
+    document.getElementById('totalDonghua').textContent = donghuaCount || '0';
+    document.getElementById('totalEpisodes').textContent = episodeCount || '0';
+    document.getElementById('totalUsers').textContent = userCount || '0';
+    document.getElementById('totalVIPs').textContent = vipCount || '0';
     
   } catch (error) {
     console.error('Error loading dashboard stats:', error);
-    showToast('Gagal memuat statistik', 'error');
+    showToast('Gagal memuat statistik dashboard', 'error');
   }
 }
 
@@ -217,30 +188,25 @@ async function loadDonghuaData() {
       data.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>
-            <div class="poster-thumbnail">
-              <img src="${item.poster_url || '/images/placeholder.jpg'}" alt="${item.title}">
-            </div>
-          </td>
-          <td>${item.title}</td>
-          <td>${item.year}</td>
-          <td>${item.genre}</td>
-          <td><span class="status-badge ${item.status.toLowerCase()}">${item.status}</span></td>
+          <td>${item.title || '-'}</td>
+          <td>${item.year || '-'}</td>
+          <td>${item.genre || '-'}</td>
+          <td>${item.rating || '-'}</td>
+          <td>${item.status || '-'}</td>
           <td>
             <button class="action-button edit-button" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-            <button class="action-button delete-button" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button>
+            <button class="action-button delete-button" data-id="${item.id}"><i class="fas fa-trash"></i></button>
           </td>
         `;
         
         tableBody.appendChild(row);
         
-        // Add event listener for edit button
+        // Add event listeners for edit and delete buttons
         const editBtn = row.querySelector('.edit-button');
         editBtn.addEventListener('click', function() {
           editDonghua(item);
         });
         
-        // Add event listener for delete button
         const deleteBtn = row.querySelector('.delete-button');
         deleteBtn.addEventListener('click', function() {
           deleteDonghua(item.id);
@@ -258,66 +224,49 @@ async function loadDonghuaData() {
 
 // Function to edit donghua
 function editDonghua(donghua) {
-  document.getElementById('donghuaModalTitle').textContent = 'Edit Donghua';
+  console.log("Editing donghua:", donghua);
   
   const form = document.getElementById('donghuaForm');
   form.dataset.id = donghua.id;
   
-  form.elements['title'].value = donghua.title;
-  form.elements['year'].value = donghua.year;
-  form.elements['genre'].value = donghua.genre;
-  form.elements['status'].value = donghua.status;
-  form.elements['rating'].value = donghua.rating;
-  form.elements['synopsis'].value = donghua.synopsis;
-  form.elements['posterUrl'].value = donghua.poster_url || '';
-  form.elements['backdropUrl'].value = donghua.backdrop_url || '';
+  form.elements['title'].value = donghua.title || '';
+  form.elements['year'].value = donghua.year || '';
+  form.elements['genre'].value = donghua.genre || '';
+  form.elements['rating'].value = donghua.rating || '';
+  form.elements['status'].value = donghua.status || '';
+  form.elements['synopsis'].value = donghua.synopsis || '';
   
-  // Show poster preview
-  if (donghua.poster_url) {
-    document.getElementById('posterPreview').innerHTML = `<img src="${donghua.poster_url}" alt="Poster Preview">`;
-  } else {
-    document.getElementById('posterPreview').innerHTML = '';
-  }
+  // Set poster and backdrop URLs
+  const posterPreview = document.getElementById('posterPreview');
+  const backdropPreview = document.getElementById('backdropPreview');
   
-  // Show backdrop preview
-  if (donghua.backdrop_url) {
-    document.getElementById('backdropPreview').innerHTML = `<img src="${donghua.backdrop_url}" alt="Backdrop Preview">`;
-  } else {
-    document.getElementById('backdropPreview').innerHTML = '';
-  }
+  posterPreview.innerHTML = donghua.poster_url ? `<img src="${donghua.poster_url}" alt="Poster" style="max-width: 100px;">` : '';
+  backdropPreview.innerHTML = donghua.backdrop_url ? `<img src="${donghua.backdrop_url}" alt="Backdrop" style="max-width: 100px;">` : '';
   
+  document.getElementById('donghuaModalTitle').textContent = 'Edit Donghua';
   openModal('donghuaModal');
 }
 
 // Function to delete donghua
 async function deleteDonghua(id) {
-  if (!confirm('Apakah Anda yakin ingin menghapus donghua ini?')) return;
-  
-  try {
-    // First delete all episodes associated with this donghua
-    const { error: episodesError } = await supabase
-      .from('episodes')
-      .delete()
-      .eq('donghua_id', id);
-    
-    if (episodesError) throw episodesError;
-    
-    // Then delete the donghua
-    const { error } = await supabase
-      .from('donghua')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    showToast('Donghua berhasil dihapus', 'success');
-    loadDonghuaData();
-    loadEpisodeData();
-    loadDashboardStats();
-    
-  } catch (error) {
-    console.error('Error deleting donghua:', error);
-    showToast('Gagal menghapus donghua', 'error');
+  if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
+    try {
+      const { error } = await supabase
+        .from('donghua')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      showToast('Donghua berhasil dihapus', 'success');
+      loadDonghuaData();
+      loadEpisodeData();
+      loadDashboardStats();
+      
+    } catch (error) {
+      console.error('Error deleting donghua:', error);
+      showToast('Gagal menghapus donghua', 'error');
+    }
   }
 }
 
@@ -326,12 +275,8 @@ async function loadEpisodeData() {
   try {
     const { data, error } = await supabase
       .from('episodes')
-      .select(`
-        *,
-        donghua:donghua_id (title)
-      `)
-      .order('donghua_id', { ascending: true })
-      .order('episode_number', { ascending: true });
+      .select('*, donghua:donghua_id(title)')
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
     
@@ -342,37 +287,31 @@ async function loadEpisodeData() {
       data.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>
-            <div class="episode-thumbnail">
-              <img src="${item.thumbnail_url || '/images/placeholder.jpg'}" alt="Episode ${item.episode_number}">
-            </div>
-          </td>
-          <td>${item.donghua?.title || 'Unknown'}</td>
-          <td>Episode ${item.episode_number}</td>
-          <td>${item.title}</td>
-          <td><span class="status-badge ${item.is_vip ? 'vip' : 'public'}">${item.is_vip ? 'VIP' : 'Umum'}</span></td>
+          <td>${item.title || '-'}</td>
+          <td>${item.episode_number || '-'}</td>
+          <td>${item.donghua ? item.donghua.title : '-'}</td>
+          <td>${item.release_date || '-'}</td>
           <td>
             <button class="action-button edit-button" data-id="${item.id}"><i class="fas fa-edit"></i></button>
-            <button class="action-button delete-button" data-id="${item.id}"><i class="fas fa-trash-alt"></i></button>
+            <button class="action-button delete-button" data-id="${item.id}"><i class="fas fa-trash"></i></button>
           </td>
         `;
         
         tableBody.appendChild(row);
         
-        // Add event listener for edit button
+        // Add event listeners for edit and delete buttons
         const editBtn = row.querySelector('.edit-button');
         editBtn.addEventListener('click', function() {
           editEpisode(item);
         });
         
-        // Add event listener for delete button
         const deleteBtn = row.querySelector('.delete-button');
         deleteBtn.addEventListener('click', function() {
           deleteEpisode(item.id);
         });
       });
     } else {
-      tableBody.innerHTML = `<tr><td colspan="6" class="no-data">Tidak ada data episode</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="5" class="no-data">Tidak ada data episode</td></tr>`;
     }
     
   } catch (error) {
@@ -381,87 +320,51 @@ async function loadEpisodeData() {
   }
 }
 
-// Function to load donghua select options
-async function loadDonghuaSelect() {
-  try {
-    const { data, error } = await supabase
-      .from('donghua')
-      .select('id, title')
-      .order('title', { ascending: true });
-    
-    if (error) throw error;
-    
-    const donghuaSelect = document.getElementById('donghuaSelect');
-    donghuaSelect.innerHTML = '<option value="">Pilih Donghua</option>';
-    
-    if (data && data.length > 0) {
-      data.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = item.title;
-        donghuaSelect.appendChild(option);
-      });
-    }
-    
-  } catch (error) {
-    console.error('Error loading donghua select:', error);
-    showToast('Gagal memuat daftar donghua', 'error');
-  }
-}
-
 // Function to edit episode
 async function editEpisode(episode) {
-  document.getElementById('episodeModalTitle').textContent = 'Edit Episode';
-  
-  // Load donghua options first
-  await loadDonghuaSelect();
+  console.log("Editing episode:", episode);
   
   const form = document.getElementById('episodeForm');
   form.dataset.id = episode.id;
   
-  form.elements['donghuaSelect'].value = episode.donghua_id;
-  form.elements['episodeNumber'].value = episode.episode_number;
-  form.elements['episodeTitle'].value = episode.title;
-  form.elements['episodeDescription'].value = episode.description || '';
-  form.elements['episodeDuration'].value = episode.duration || '';
-  form.elements['isVip'].value = episode.is_vip.toString();
-  form.elements['thumbnailUrl'].value = episode.thumbnail_url || '';
-  form.elements['videoUrl'].value = episode.video_url || '';
+  form.elements['title'].value = episode.title || '';
+  form.elements['episode_number'].value = episode.episode_number || '';
+  form.elements['release_date'].value = episode.release_date || '';
+  form.elements['description'].value = episode.description || '';
+  form.elements['duration'].value = episode.duration || '';
+  form.elements['video_url'].value = episode.video_url || '';
+  form.elements['is_vip'].checked = episode.is_vip || false;
   
-  // Format release date for input
-  const releaseDate = new Date(episode.release_date);
-  const formattedDate = releaseDate.toISOString().split('T')[0];
-  form.elements['releaseDate'].value = formattedDate;
+  // Load donghua select options
+  await loadDonghuaSelect(episode.donghua_id);
   
-  // Show thumbnail preview
-  if (episode.thumbnail_url) {
-    document.getElementById('thumbnailPreview').innerHTML = `<img src="${episode.thumbnail_url}" alt="Thumbnail Preview">`;
-  } else {
-    document.getElementById('thumbnailPreview').innerHTML = '';
-  }
+  // Set thumbnail URL
+  const thumbnailPreview = document.getElementById('thumbnailPreview');
+  thumbnailPreview.innerHTML = episode.thumbnail_url ? `<img src="${episode.thumbnail_url}" alt="Thumbnail" style="max-width: 100px;">` : '';
   
+  document.getElementById('episodeModalTitle').textContent = 'Edit Episode';
   openModal('episodeModal');
 }
 
 // Function to delete episode
 async function deleteEpisode(id) {
-  if (!confirm('Apakah Anda yakin ingin menghapus episode ini?')) return;
-  
-  try {
-    const { error } = await supabase
-      .from('episodes')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    showToast('Episode berhasil dihapus', 'success');
-    loadEpisodeData();
-    loadDashboardStats();
-    
-  } catch (error) {
-    console.error('Error deleting episode:', error);
-    showToast('Gagal menghapus episode', 'error');
+  if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
+    try {
+      const { error } = await supabase
+        .from('episodes')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      showToast('Episode berhasil dihapus', 'success');
+      loadEpisodeData();
+      loadDashboardStats();
+      
+    } catch (error) {
+      console.error('Error deleting episode:', error);
+      showToast('Gagal menghapus episode', 'error');
+    }
   }
 }
 
@@ -534,6 +437,8 @@ async function loadUsersData() {
 
 // Function to edit user
 function editUser(user) {
+  console.log("Editing user:", user);
+  
   const form = document.getElementById('userForm');
   form.dataset.id = user.id;
   
@@ -544,20 +449,23 @@ function editUser(user) {
   
   // Show/hide expiration date input based on role
   const expirationGroup = document.getElementById('expirationDateGroup');
-  expirationGroup.style.display = user.role === 'vip' ? 'block' : 'none';
+  expirationGroup.style.display = form.elements['userRole'].value === 'vip' ? 'block' : 'none';
   
   // Setup date-time local input for expiration date
   const expirationInput = form.elements['expirationDate'];
   if (user.expiration_date) {
     // Convert UTC string to local datetime-local input format
     const date = new Date(user.expiration_date);
-    const localDatetime = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
-      .toISOString()
-      .slice(0, 16); // Format: "YYYY-MM-DDTHH:MM"
+    // Format date to YYYY-MM-DDTHH:MM format needed for datetime-local
+    const localDatetime = date.toISOString().slice(0, 16);
+    
+    console.log("Original expiration date:", user.expiration_date);
+    console.log("Setting expiration input to:", localDatetime);
     
     expirationInput.value = localDatetime;
   } else {
     expirationInput.value = '';
+    console.log("No expiration date found");
   }
   
   // Add change event to userRole select
@@ -572,13 +480,35 @@ function editUser(user) {
 // Function to check and update expired VIP status
 async function checkExpiredVip() {
   try {
-    const { data, error } = await supabase.rpc('update_expired_vip_status');
+    const now = new Date().toISOString();
+    
+    // Get all VIP users with expired dates
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'vip')
+      .lt('expiration_date', now);
     
     if (error) throw error;
     
-    const updatedCount = data.updated_count || 0;
-    
-    if (updatedCount > 0) {
+    if (data && data.length > 0) {
+      console.log(`Found ${data.length} expired VIP accounts`);
+      
+      // Update each expired user to regular role
+      let updatedCount = 0;
+      
+      for (const user of data) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            role: 'user',
+            expiration_date: null
+          })
+          .eq('id', user.id);
+        
+        if (!updateError) updatedCount++;
+      }
+      
       showToast(`${updatedCount} akun VIP kedaluwarsa telah diperbarui`, 'success');
     } else {
       showToast('Tidak ada akun VIP yang kedaluwarsa', 'info');
@@ -601,43 +531,89 @@ function setupFormSubmissions() {
   donghuaForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = {
-      title: this.elements['title'].value,
-      year: parseInt(this.elements['year'].value),
-      genre: this.elements['genre'].value,
-      status: this.elements['status'].value,
-      rating: parseFloat(this.elements['rating'].value),
-      synopsis: this.elements['synopsis'].value,
-      poster_url: this.elements['posterUrl'].value || null,
-      backdrop_url: this.elements['backdropUrl'].value || null
-    };
+    const id = this.dataset.id;
+    const title = this.elements['title'].value;
+    const year = this.elements['year'].value;
+    const genre = this.elements['genre'].value;
+    const rating = this.elements['rating'].value;
+    const status = this.elements['status'].value;
+    const synopsis = this.elements['synopsis'].value;
+    
+    // Handle image uploads
+    const posterFile = this.elements['poster'].files[0];
+    const backdropFile = this.elements['backdrop'].files[0];
+    
+    let poster_url = null;
+    let backdrop_url = null;
     
     try {
-      let response;
-      
-      if (this.dataset.id) {
-        // Update existing donghua
-        response = await supabase
-          .from('donghua')
-          .update(formData)
-          .eq('id', this.dataset.id);
-      } else {
-        // Insert new donghua
-        response = await supabase
-          .from('donghua')
-          .insert([formData]);
+      // Upload poster if a new file is selected
+      if (posterFile) {
+        const posterPath = `posters/${generateUUID()}-${posterFile.name}`;
+        const { error: posterError } = await supabase.storage
+          .from('images')
+          .upload(posterPath, posterFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (posterError) throw posterError;
+        
+        poster_url = `${supabase.supabaseUrl}/storage/v1/object/public/images/${posterPath}`;
       }
       
-      if (response.error) throw response.error;
+      // Upload backdrop if a new file is selected
+      if (backdropFile) {
+        const backdropPath = `backdrops/${generateUUID()}-${backdropFile.name}`;
+        const { error: backdropError } = await supabase.storage
+          .from('images')
+          .upload(backdropPath, backdropFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (backdropError) throw backdropError;
+        
+        backdrop_url = `${supabase.supabaseUrl}/storage/v1/object/public/images/${backdropPath}`;
+      }
       
-      showToast(`Donghua berhasil ${this.dataset.id ? 'diperbarui' : 'ditambahkan'}`, 'success');
+      // Prepare update or insert object
+      const donghuaData = {
+        title,
+        year,
+        genre,
+        rating,
+        status,
+        synopsis,
+        poster_url: poster_url || this.dataset.posterUrl || null,
+        backdrop_url: backdrop_url || this.dataset.backdropUrl || null
+      };
+      
+      // Perform update or insert
+      let query;
+      if (id) {
+        query = supabase
+          .from('donghua')
+          .update(donghuaData)
+          .eq('id', id);
+      } else {
+        query = supabase
+          .from('donghua')
+          .insert([donghuaData]);
+      }
+      
+      const { error } = await query.select();
+      if (error) throw error;
+      
+      showToast(`Donghua ${id ? 'berhasil diperbarui' : 'berhasil ditambahkan'}`, 'success');
       closeModal('donghuaModal');
       loadDonghuaData();
+      loadEpisodeData();
       loadDashboardStats();
       
     } catch (error) {
-      console.error('Error saving donghua:', error);
-      showToast(`Gagal ${this.dataset.id ? 'memperbarui' : 'menambahkan'} donghua`, 'error');
+      console.error('Error submitting donghua form:', error);
+      showToast('Gagal menyimpan donghua: ' + error.message, 'error');
     }
   });
   
@@ -646,46 +622,73 @@ function setupFormSubmissions() {
   episodeForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = {
-      donghua_id: parseInt(this.elements['donghuaSelect'].value),
-      episode_number: parseInt(this.elements['episodeNumber'].value),
-      title: this.elements['episodeTitle'].value,
-      description: this.elements['episodeDescription'].value || null,
-      duration: parseInt(this.elements['episodeDuration'].value) || null,
-      is_vip: this.elements['isVip'].value === 'true',
-      thumbnail_url: this.elements['thumbnailUrl'].value || null,
-      video_url: this.elements['videoUrl'].value || null,
-      release_date: this.elements['releaseDate'].value
-    };
+    const id = this.dataset.id;
+    const title = this.elements['title'].value;
+    const episode_number = this.elements['episode_number'].value;
+    const donghua_id = this.elements['donghua_id'].value;
+    const release_date = this.elements['release_date'].value;
+    const description = this.elements['description'].value;
+    const duration = this.elements['duration'].value;
+    const video_url = this.elements['video_url'].value;
+    const is_vip = this.elements['is_vip'].checked;
+    
+    // Handle thumbnail upload
+    const thumbnailFile = this.elements['thumbnail'].files[0];
+    let thumbnail_url = null;
     
     try {
-      let response;
-      
-      if (this.dataset.id) {
-        // Update existing episode
-        response = await supabase
-          .from('episodes')
-          .update(formData)
-          .eq('id', this.dataset.id);
-      } else {
-        // Insert new episode
-        // Generate a UUID for the new episode
-        const uuid = generateUUID();
-        response = await supabase
-          .from('episodes')
-          .insert([{ ...formData, id: uuid }]);
+      if (thumbnailFile) {
+        const thumbnailPath = `thumbnails/${generateUUID()}-${thumbnailFile.name}`;
+        const { error: thumbnailError } = await supabase.storage
+          .from('images')
+          .upload(thumbnailPath, thumbnailFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (thumbnailError) throw thumbnailError;
+        
+        thumbnail_url = `${supabase.supabaseUrl}/storage/v1/object/public/images/${thumbnailPath}`;
       }
       
-      if (response.error) throw response.error;
+      // Prepare update or insert object
+      const episodeData = {
+        title,
+        episode_number,
+        donghua_id,
+        release_date,
+        description,
+        duration,
+        video_url,
+        is_vip,
+        thumbnail_url: thumbnail_url || this.dataset.thumbnailUrl || null
+      };
       
-      showToast(`Episode berhasil ${this.dataset.id ? 'diperbarui' : 'ditambahkan'}`, 'success');
+      // Perform update or insert
+      let query;
+      if (id) {
+        query = supabase
+          .from('episodes')
+          .update(episodeData)
+          .eq('id', id);
+      } else {
+        episodeData.id = generateUUID();
+        query = supabase
+          .from('episodes')
+          .insert([episodeData]);
+      }
+      
+      const { error } = await query.select();
+      if (error) throw error;
+      
+      showToast(`Episode ${id ? 'berhasil diperbarui' : 'berhasil ditambahkan'}`, 'success');
       closeModal('episodeModal');
       loadEpisodeData();
       loadDashboardStats();
       
     } catch (error) {
-      console.error('Error saving episode:', error);
-      showToast(`Gagal ${this.dataset.id ? 'memperbarui' : 'menambahkan'} episode`, 'error');
+      console.error('Error submitting episode form:', error);
+      showToast('Gagal menyimpan episode: ' + error.message, 'error');
     }
   });
   
@@ -699,62 +702,89 @@ function setupFormSubmissions() {
     const isVip = role === 'vip';
     
     try {
-      // Prepare update data
-      const updateData = {
-        role: role
-      };
-      
-      // Add expiration_date if VIP and a date is provided
-      if (isVip && this.elements['expirationDate'].value) {
-        // Convert local datetime-local input to UTC
-        const localDate = new Date(this.elements['expirationDate'].value);
-        // We don't need to adjust for timezone offset because Supabase will store it as UTC
-        updateData.expiration_date = localDate.toISOString();
-        console.log("Setting expiration date:", updateData.expiration_date);
-      } else if (isVip) {
-        // If VIP but no date, set expiration_date to null (no expiration)
-        updateData.expiration_date = null;
-        console.log("Setting unlimited VIP (no expiration date)");
-      } else {
-        // If not VIP, clear expiration_date
-        updateData.expiration_date = null;
-        console.log("Clearing expiration date because not VIP");
+      // Get admin session
+      const { data: { user: adminUser } } = await supabase.auth.getUser();
+      if (!adminUser) {
+        throw new Error('Admin not authenticated');
       }
       
-      // Update user profile
-      const { error } = await supabase
+      // First update the user role
+      await updateUserRole(userId, role, adminUser.id);
+      
+      // Then update the expiration date if needed
+      let expirationDate = null;
+      if (isVip && this.elements['expirationDate'].value) {
+        // Get the date from input and convert to ISO
+        const localDate = new Date(this.elements['expirationDate'].value);
+        expirationDate = localDate.toISOString();
+        console.log("Setting expiration date:", expirationDate);
+      }
+      
+      // Update expiration date separately
+      const { error: updateError } = await supabase
         .from('profiles')
-        .update(updateData)
+        .update({ expiration_date: expirationDate })
         .eq('id', userId);
       
-      if (error) throw error;
+      if (updateError) {
+        console.error("Error updating expiration date:", updateError);
+        showToast('Status pengguna diperbarui, namun gagal memperbarui masa aktif VIP', 'warning');
+      } else {
+        showToast('Pengguna berhasil diperbarui', 'success');
+      }
       
-      showToast('Pengguna berhasil diperbarui', 'success');
       closeModal('userModal');
       loadUsersData();
       loadDashboardStats();
       
     } catch (error) {
       console.error('Error updating user:', error);
-      showToast('Gagal memperbarui pengguna', 'error');
+      showToast('Gagal memperbarui pengguna: ' + (error.message || ''), 'error');
     }
   });
 }
 
-// Function to set up modal close buttons
+// Function to load donghua options into select element
+async function loadDonghuaSelect(selectedId = null) {
+  try {
+    const { data, error } = await supabase
+      .from('donghua')
+      .select('id, title')
+      .order('title', { ascending: true });
+    
+    if (error) throw error;
+    
+    const selectElement = document.getElementById('donghua_id');
+    selectElement.innerHTML = '';
+    
+    if (data && data.length > 0) {
+      data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.title;
+        option.selected = selectedId === item.id;
+        selectElement.appendChild(option);
+      });
+    } else {
+      const option = document.createElement('option');
+      option.textContent = 'Tidak ada donghua';
+      selectElement.appendChild(option);
+    }
+    
+  } catch (error) {
+    console.error('Error loading donghua options:', error);
+    showToast('Gagal memuat pilihan donghua', 'error');
+  }
+}
+
+// Function to set up close modal buttons
 function setupModalCloseButtons() {
-  document.querySelectorAll('.close-modal').forEach(button => {
+  const closeModalButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+  closeModalButtons.forEach(button => {
     button.addEventListener('click', function() {
       const modal = this.closest('.modal');
-      modal.style.display = 'none';
-    });
-  });
-  
-  // Close modal when clicking outside
-  window.addEventListener('click', function(e) {
-    document.querySelectorAll('.modal').forEach(modal => {
-      if (e.target === modal) {
-        modal.style.display = 'none';
+      if (modal) {
+        closeModal(modal.id);
       }
     });
   });
@@ -762,57 +792,72 @@ function setupModalCloseButtons() {
 
 // Function to set up image preview functionality
 function setupImagePreviewFunctions() {
-  // Poster URL preview
-  document.getElementById('posterUrl').addEventListener('input', function() {
-    if (this.value) {
-      document.getElementById('posterPreview').innerHTML = `<img src="${this.value}" alt="Poster Preview" onerror="this.src='/images/placeholder.jpg'">`;
-    } else {
-      document.getElementById('posterPreview').innerHTML = '';
-    }
-  });
+  // Poster preview
+  const posterInput = document.getElementById('poster');
+  if (posterInput) {
+    posterInput.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('posterPreview').innerHTML = `<img src="${e.target.result}" alt="Poster" style="max-width: 100px;">`;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  }
   
-  // Backdrop URL preview
-  document.getElementById('backdropUrl').addEventListener('input', function() {
-    if (this.value) {
-      document.getElementById('backdropPreview').innerHTML = `<img src="${this.value}" alt="Backdrop Preview" onerror="this.src='/images/placeholder.jpg'">`;
-    } else {
-      document.getElementById('backdropPreview').innerHTML = '';
-    }
-  });
+  // Backdrop preview
+  const backdropInput = document.getElementById('backdrop');
+  if (backdropInput) {
+    backdropInput.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('backdropPreview').innerHTML = `<img src="${e.target.result}" alt="Backdrop" style="max-width: 100px;">`;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  }
   
-  // Thumbnail URL preview
-  document.getElementById('thumbnailUrl').addEventListener('input', function() {
-    if (this.value) {
-      document.getElementById('thumbnailPreview').innerHTML = `<img src="${this.value}" alt="Thumbnail Preview" onerror="this.src='/images/placeholder.jpg'">`;
-    } else {
-      document.getElementById('thumbnailPreview').innerHTML = '';
-    }
-  });
+  // Thumbnail preview
+  const thumbnailInput = document.getElementById('thumbnail');
+  if (thumbnailInput) {
+    thumbnailInput.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('thumbnailPreview').innerHTML = `<img src="${e.target.result}" alt="Thumbnail" style="max-width: 100px;">`;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 }
 
-// Helper function to generate UUID for episodes
+// Function to generate a unique ID
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 }
 
-// Function to show toast message
+// Function to show a toast message
 function showToast(message, type = 'success') {
-  const toastContainer = document.getElementById('toastContainer');
-  
   const toast = document.createElement('div');
-  toast.className = `admin-toast ${type}`;
+  toast.className = `toast ${type}`;
   toast.innerHTML = `
     <div class="toast-content">
-      <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-circle'}"></i>
+      <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
       <span>${message}</span>
     </div>
   `;
   
-  toastContainer.appendChild(toast);
+  document.body.appendChild(toast);
   
   // Show toast
   setTimeout(() => {
@@ -828,14 +873,55 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
-// Function to open modal
+// Function to open a modal
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
-  modal.style.display = 'block';
+  if (modal) {
+    modal.style.display = 'block';
+  }
 }
 
-// Function to close modal
+// Function to close a modal
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  modal.style.display = 'none';
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Function to check if user is admin
+async function checkAdminAuth() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error || !session) {
+      return false;
+    }
+    
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+    
+    if (profileError || !profile) {
+      return false;
+    }
+    
+    return profile.role === 'admin';
+  } catch (error) {
+    console.error('Error checking admin auth:', error);
+    return false;
+  }
+}
+
+// Function to logout user
+async function logoutUser() {
+  try {
+    await supabase.auth.signOut();
+    window.location.href = 'index.html';
+  } catch (error) {
+    console.error('Error logging out:', error);
+    showToast('Gagal keluar', 'error');
+  }
 }

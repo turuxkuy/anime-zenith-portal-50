@@ -284,6 +284,23 @@ async function changePassword() {
   }
 }
 
+// Function to check login status
+async function checkLoginStatus() {
+  try {
+    const { data: { session }, error } = await window.supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Session error:", error);
+      return false;
+    }
+    
+    return !!session;
+  } catch (error) {
+    console.error("Error checking login status:", error);
+    return false;
+  }
+}
+
 // Function to log out
 async function logout() {
   console.log("Attempting to logout...");
