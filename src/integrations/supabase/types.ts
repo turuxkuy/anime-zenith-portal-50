@@ -108,6 +108,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string | null
+          expiration_date: string | null
           id: string
           role: string
           username: string
@@ -115,6 +116,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email?: string | null
+          expiration_date?: string | null
           id: string
           role?: string
           username: string
@@ -122,6 +124,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string | null
+          expiration_date?: string | null
           id?: string
           role?: string
           username?: string
@@ -133,7 +136,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_and_update_expired_vip: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_expired_vip_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

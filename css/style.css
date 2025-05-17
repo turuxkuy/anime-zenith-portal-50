@@ -1,4 +1,3 @@
-
 /* Base Styling */
 :root {
   --primary: #8B5CF6;
@@ -72,10 +71,19 @@ nav {
   font-size: 1.5rem;
   font-weight: bold;
   color: var(--light);
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
-.logo span {
+.site-logo {
+  height: 40px;
+  margin-right: 10px;
+}
+
+.logo-text {
   color: var(--primary);
+  font-weight: bold;
 }
 
 .nav-menu {
@@ -124,10 +132,10 @@ main {
 }
 
 /* Hero Section */
-.hero {
+.hero-section {
   position: relative;
-  height: 300px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(126, 105, 171, 0.4)), url('../images/hero-bg.jpg');
+  height: 400px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.7), rgba(126, 105, 171, 0.7)), url('../images/hero-bg.jpg');
   background-size: cover;
   background-position: center;
   margin-bottom: 2rem;
@@ -141,18 +149,58 @@ main {
 
 .hero-content {
   padding: 2rem;
-  max-width: 600px;
+  max-width: 700px;
+  background-color: rgba(26, 31, 44, 0.7);
+  border-radius: var(--radius);
+  backdrop-filter: blur(5px);
 }
 
-.hero h1 {
+.hero-content h1 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  color: var(--light);
 }
 
-.hero p {
+.hero-content p {
   font-size: 1.2rem;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  color: var(--light);
+  margin-bottom: 1.5rem;
+}
+
+.hero-button {
+  display: inline-block;
+  background-color: var(--primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: background-color 0.3s, transform 0.2s;
+  border: none;
+}
+
+.hero-button:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.section-title {
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+  color: var(--light);
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background-color: var(--primary);
 }
 
 /* Donghua Grid */
