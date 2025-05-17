@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Admin.js loaded");
   
@@ -302,7 +301,7 @@ async function loadUsersList() {
     
     const { data: users, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role, created_at')
+      .select('id, username, email, role, created_at, expiration_date')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -324,11 +323,28 @@ async function loadUsersList() {
           user.role === 'vip' ? 'status-vip' : 
           'status-regular';
         
+        // Format expiration date if it exists
+        let expirationText = '-';
+        if (user.expiration_date) {
+          const expDate = new Date(user.expiration_date);
+          const now = new Date();
+          
+          if (expDate < now && user.role === 'vip') {
+            expirationText = '<span class="expired-date">Kedaluwarsa</span>';
+          } else {
+            expirationText = new Date(user.expiration_date).toLocaleString('id-ID', {
+              year: 'numeric', month: 'short', day: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+          }
+        }
+        
         row.innerHTML = `
           <td>${user.username || 'N/A'}</td>
           <td>${user.email || 'N/A'}</td>
           <td><span class="status-badge ${roleBadgeClass}">${user.role || 'user'}</span></td>
-          <td>${new Date(user.created_at).toLocaleDateString()}</td>
+          <td>${user.role === 'vip' ? expirationText : '-'}</td>
+          <td>${new Date(user.created_at).toLocaleDateString('id-ID')}</td>
           <td>
             <button class="edit-button" onclick="openModal('userModal', 'edit', '${user.id}')"><i class="fas fa-edit"></i></button>
           </td>
@@ -336,11 +352,48 @@ async function loadUsersList() {
         usersTableBody.appendChild(row);
       });
     } else {
-      usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No users found</td></tr>`;
+      usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No users found</td></tr>`;
+    }
+
+    // Add event listener to check expired VIP button
+    const checkExpiredBtn = document.getElementById('checkExpiredBtn');
+    if (checkExpiredBtn) {
+      checkExpiredBtn.addEventListener('click', checkExpiredVipUsers);
     }
   } catch (error) {
     console.error('Error loading users list:', error);
     showToast('Failed to load users list: ' + error.message, 'error');
+  }
+}
+
+// Function to check and update expired VIP users
+async function checkExpiredVipUsers() {
+  try {
+    showToast('Memeriksa VIP yang kedaluwarsa...', 'info');
+    
+    // Call the server function to check and update expired VIP users
+    const { data, error } = await window.supabase.rpc('update_expired_vip_status');
+    
+    if (error) {
+      console.error('Error checking expired VIP users:', error);
+      showToast('Gagal memeriksa VIP kedaluwarsa: ' + error.message, 'error');
+      return;
+    }
+    
+    const updatedCount = data?.updated_count || 0;
+    console.log('Updated expired VIP users:', data);
+    
+    // Reload users list
+    await loadUsersList();
+    
+    if (updatedCount > 0) {
+      showToast(`${updatedCount} pengguna VIP telah kedaluwarsa dan diubah ke regular`, 'success');
+    } else {
+      showToast('Tidak ada pengguna VIP yang kedaluwarsa', 'info');
+    }
+  } catch (error) {
+    console.error('Error checking expired VIP users:', error);
+    showToast('Gagal memeriksa VIP kedaluwarsa: ' + error.message, 'error');
   }
 }
 
@@ -490,7 +543,7 @@ async function populateUserForm(userId) {
     // Fetch user data with explicit error handling
     const { data: user, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role')
+      .select('id, username, email, role, expiration_date')
       .eq('id', userId)
       .single();
 
@@ -536,6 +589,28 @@ async function populateUserForm(userId) {
       // Set the current role
       roleSelect.value = roleValue;
       console.log('Role select value after setting:', roleSelect.value);
+      
+      // Show/hide expiration date field based on role
+      const expirationDateGroup = document.getElementById('expirationDateGroup');
+      if (expirationDateGroup) {
+        expirationDateGroup.style.display = roleValue === 'vip' ? 'block' : 'none';
+        
+        // Add event listener to role select to show/hide expiration date field
+        roleSelect.addEventListener('change', function() {
+          expirationDateGroup.style.display = this.value === 'vip' ? 'block' : 'none';
+        });
+      }
+    }
+    
+    // Set expiration date if available
+    const expirationDateInput = form.querySelector('#expirationDate');
+    if (expirationDateInput && user.expiration_date) {
+      // Format date for datetime-local input (YYYY-MM-DDThh:mm)
+      const date = new Date(user.expiration_date);
+      const formattedDate = date.toISOString().slice(0, 16);
+      expirationDateInput.value = formattedDate;
+    } else if (expirationDateInput) {
+      expirationDateInput.value = '';
     }
   } catch (error) {
     console.error('Error populating user form:', error);
@@ -769,8 +844,9 @@ async function handleUserSubmit(event) {
     const form = event.target;
     const userId = form.querySelector('#userId').value;
     const userRole = form.querySelector('#userRole').value;
+    const expirationDate = form.querySelector('#expirationDate').value;
 
-    console.log('Updating user role:', { userId, userRole });
+    console.log('Updating user:', { userId, userRole, expirationDate });
 
     // Validate form fields
     if (!userId || !userRole) {
@@ -804,54 +880,42 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    console.log('Admin check passed, proceeding with edge function call');
-
-    // First check if the user exists
-    const { data: userExists, error: userExistsError } = await window.supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', userId)
-      .single();
-
-    if (userExistsError || !userExists) {
-      console.error('User not found:', userExistsError || 'No user data returned');
-      showToast('User not found.', 'error');
-      return;
+    // Prepare update data
+    const updateData = {
+      role: userRole
+    };
+    
+    // Only set expiration_date if the role is VIP and the date is provided
+    if (userRole === 'vip') {
+      if (expirationDate) {
+        updateData.expiration_date = new Date(expirationDate).toISOString();
+      } else {
+        updateData.expiration_date = null; // No expiration
+      }
+    } else {
+      updateData.expiration_date = null; // Clear expiration if not VIP
     }
+    
+    console.log('Update data:', updateData);
 
-    console.log('User found:', userExists);
-    console.log('Current role:', userExists.role);
-    console.log('New role:', userRole);
-    
-    // Call the edge function to update the user role
-    const supabaseUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co';
-    
     // Show loading toast
-    showToast('Updating user role...', 'info');
+    showToast('Updating user...', 'info');
     
-    const response = await fetch(`${supabaseUrl}/functions/v1/update-user-role`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        userId: userId,
-        newRole: userRole,
-        adminId: session.user.id
-      })
-    });
+    // Update the user directly in the profiles table
+    const { data, error } = await window.supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select();
     
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('Edge function error:', result);
-      showToast(`Failed to update user role: ${result.error || 'Unknown error'}`, 'error');
+    if (error) {
+      console.error('Error updating user:', error);
+      showToast(`Failed to update user: ${error.message}`, 'error');
       return;
     }
     
-    console.log('Role updated successfully via edge function:', result);
-    showToast('User role updated successfully!', 'success');
+    console.log('User updated successfully:', data);
+    showToast('User updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
 

@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profil Pengguna - Zenith Donghua</title>
+  <title>Profil Pengguna - Aikacungwen</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -17,7 +18,10 @@
   <header>
     <nav>
       <div class="logo">
-        <a href="index.html">Zenith<span>Donghua</span></a>
+        <a href="index.html">
+          <img src="/lovable-uploads/4135dcc4-d312-454c-99b6-669edb7f635e.png" alt="Aikacungwen Logo" class="site-logo">
+          <span class="logo-text">Aikacungwen</span>
+        </a>
       </div>
       <div class="menu-toggle">
         <i class="fas fa-bars"></i>
@@ -67,6 +71,10 @@
                 <span class="detail-label">Status Akun</span>
                 <span id="detailRole">-</span>
               </li>
+              <li id="vipExpirationContainer" style="display: none;">
+                <span class="detail-label">Masa Aktif VIP</span>
+                <span id="detailExpiration">-</span>
+              </li>
               <li>
                 <span class="detail-label">Tanggal Bergabung</span>
                 <span id="detailJoined">-</span>
@@ -106,6 +114,7 @@
                 <li><i class="fas fa-check"></i> Episode terbaru lebih cepat</li>
               </ul>
               <p class="vip-active-text">Nikmati semua fitur VIP!</p>
+              <p id="vipExpirationNote" class="vip-note">Masa aktif VIP Anda: <span id="vipExpirationDate">-</span></p>
             </div>
           </div>
         </div>

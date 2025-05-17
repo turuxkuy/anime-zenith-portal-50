@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('User profile page loaded');
   
@@ -278,6 +279,56 @@ async function loadUserProfile(userId) {
         document.getElementById('detailJoined').textContent = createdDate;
       }
       
+      // Show expiration date if the user is VIP
+      const vipExpirationContainer = document.getElementById('vipExpirationContainer');
+      const detailExpiration = document.getElementById('detailExpiration');
+      const vipExpirationDate = document.getElementById('vipExpirationDate');
+      const vipExpirationNote = document.getElementById('vipExpirationNote');
+      
+      if (profile.role === 'vip' && profile.expiration_date) {
+        const expirationDate = new Date(profile.expiration_date);
+        const now = new Date();
+        const formattedDate = expirationDate.toLocaleString('id-ID', {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        
+        if (vipExpirationContainer) vipExpirationContainer.style.display = 'flex';
+        if (detailExpiration) detailExpiration.textContent = formattedDate;
+        if (vipExpirationDate) vipExpirationDate.textContent = formattedDate;
+        if (vipExpirationNote) vipExpirationNote.style.display = 'block';
+        
+        // Add expiration warning if it's close
+        const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
+        
+        if (daysLeft <= 7 && daysLeft > 0) {
+          if (detailExpiration) {
+            detailExpiration.innerHTML = `${formattedDate} <span class="expiration-warning">(${daysLeft} hari lagi)</span>`;
+          }
+          if (vipExpirationDate) {
+            vipExpirationDate.innerHTML = `${formattedDate} <span class="expiration-warning">(${daysLeft} hari lagi)</span>`;
+          }
+        } else if (daysLeft <= 0) {
+          // Handle expired VIP (this should be handled by the database function, but show it anyway)
+          if (detailExpiration) {
+            detailExpiration.innerHTML = `<span class="expired-date">Kedaluwarsa</span>`;
+          }
+          if (vipExpirationDate) {
+            vipExpirationDate.innerHTML = `<span class="expired-date">Kedaluwarsa</span>`;
+          }
+        }
+      } else if (profile.role === 'vip') {
+        // VIP with no expiration date
+        if (vipExpirationContainer) vipExpirationContainer.style.display = 'flex';
+        if (detailExpiration) detailExpiration.textContent = 'Tanpa batas';
+        if (vipExpirationDate) vipExpirationDate.textContent = 'Tanpa batas';
+        if (vipExpirationNote) vipExpirationNote.style.display = 'block';
+      } else {
+        // Not VIP
+        if (vipExpirationContainer) vipExpirationContainer.style.display = 'none';
+        if (vipExpirationNote) vipExpirationNote.style.display = 'none';
+      }
+      
       // Show/hide VIP cards based on role
       const regularUserCard = document.getElementById('regularUserCard');
       const vipUserCard = document.getElementById('vipUserCard');
@@ -293,5 +344,17 @@ async function loadUserProfile(userId) {
   } catch (error) {
     console.error('Error loading user profile:', error);
     // Handle error (e.g., show a message to the user)
+  }
+}
+
+// Function to logout
+async function logoutUser() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    window.location.href = 'index.html';
+  } catch (error) {
+    console.error('Logout failed:', error);
+    alert('Logout gagal: ' + (error.message || 'Terjadi kesalahan'));
   }
 }
