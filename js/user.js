@@ -1,360 +1,321 @@
 
+// Get elements from the DOM
 document.addEventListener('DOMContentLoaded', async function() {
-  console.log('User profile page loaded');
-  
-  // Check if Supabase JS is loaded
-  if (typeof supabase === 'undefined') {
-    console.error('Supabase client is not loaded. Make sure to include supabase-config.js');
+  console.log('User page loaded');
+
+  // Check if Supabase client is available
+  if (typeof window.supabase === 'undefined') {
+    console.error("Supabase client not available");
     return;
   }
+
+  // Check if user is logged in
+  const isLoggedIn = await checkLoginStatus();
+  const loginPrompt = document.getElementById('loginPrompt');
+  const profileContainer = document.getElementById('profileContainer');
+  const adminLink = document.getElementById('adminLink');
+  const loginBtn = document.getElementById('loginBtn');
   
-  // Initialize menu toggle functionality with improved event handling
-  const menuToggle = document.querySelector('.menu-toggle');
-  const navMenu = document.querySelector('.nav-menu');
-  
-  if (menuToggle && navMenu) {
-    // Use click instead of addEventListener to avoid any potential duplicates
-    menuToggle.onclick = function(event) {
-      event.preventDefault();
-      event.stopPropagation();
-      navMenu.classList.toggle('active');
-      console.log('Menu toggle clicked, menu is now:', navMenu.classList.contains('active') ? 'active' : 'inactive');
-    };
-    
-    // Close mobile menu when clicking anywhere outside
-    document.addEventListener('click', function(event) {
-      if (!menuToggle.contains(event.target) && !navMenu.contains(event.target) && navMenu.classList.contains('active')) {
-        navMenu.classList.remove('active');
+  if (isLoggedIn) {
+    // User is logged in
+    if (loginBtn) {
+      loginBtn.textContent = 'Keluar';
+      loginBtn.setAttribute('href', '#');
+      loginBtn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        await logout();
+      });
+    }
+
+    // Get current user data
+    try {
+      await loadUserProfile();
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+      showToast("Gagal memuat profil pengguna", "error");
+    }
+
+    // Show profile container, hide login prompt
+    if (loginPrompt) loginPrompt.style.display = 'none';
+    if (profileContainer) profileContainer.style.display = 'block';
+  } else {
+    // User is not logged in
+    if (loginPrompt) loginPrompt.style.display = 'block';
+    if (profileContainer) profileContainer.style.display = 'none';
+    if (adminLink) adminLink.style.display = 'none';
+  }
+
+  // Set up event listeners for change password modal
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', function() {
+      openModal('changePasswordModal');
+    });
+  }
+
+  // Set up event listeners for VIP request
+  const requestVipBtn = document.getElementById('requestVipBtn');
+  if (requestVipBtn) {
+    requestVipBtn.addEventListener('click', async function() {
+      try {
+        await requestVipStatus();
+        openModal('requestVipModal');
+      } catch (error) {
+        console.error("Error requesting VIP status:", error);
+        showToast("Gagal meminta status VIP", "error");
       }
     });
-  } else {
-    console.error('Menu toggle or nav menu elements not found');
   }
-  
-  // Check authentication status
-  try {
-    const { data } = await supabase.auth.getSession();
-    const isAuthenticated = !!data.session;
-    
-    console.log('Authentication status:', isAuthenticated ? 'Logged in' : 'Not logged in');
-    
-    // Get UI elements
-    const loginPrompt = document.getElementById('loginPrompt');
-    const profileContainer = document.getElementById('profileContainer');
-    const changePasswordBtn = document.getElementById('changePasswordBtn');
-    const changePasswordModal = document.getElementById('changePasswordModal');
-    const requestVipBtn = document.getElementById('requestVipBtn');
-    const requestVipModal = document.getElementById('requestVipModal');
-    const logoutButton = document.getElementById('logoutButton');
-    const regularUserCard = document.getElementById('regularUserCard');
-    const vipUserCard = document.getElementById('vipUserCard');
-  
-    // Show/hide elements based on authentication
-    if (isAuthenticated) {
-      console.log('User is authenticated, showing profile');
-      if (loginPrompt) loginPrompt.style.display = 'none';
-      if (profileContainer) profileContainer.style.display = 'block';
-      
-      // Load user data
-      await loadUserProfile(data.session.user.id);
-    } else {
-      console.log('User is not authenticated, showing login prompt');
-      if (loginPrompt) loginPrompt.style.display = 'block';
-      if (profileContainer) profileContainer.style.display = 'none';
-    }
-    
-    // Add event listeners
-    if (changePasswordBtn) {
-      changePasswordBtn.addEventListener('click', function() {
-        if (changePasswordModal) changePasswordModal.style.display = 'flex';
-      });
-    }
-    
-    if (requestVipBtn) {
-      requestVipBtn.addEventListener('click', async function() {
-        try {
-          // Send VIP request notification to admins
-          const userId = data.session.user.id;
-          
-          // Get username from profile
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', userId)
-            .single();
-            
-          const username = profileData?.username || 'User';
-          console.log('Sending VIP request for user:', username, 'with ID:', userId);
-          
-          // Insert new VIP request - first create the table if it doesn't exist
-          const { error: insertError } = await supabase
-            .from('vip_requests')
-            .insert([
-              {
-                user_id: userId,
-                username: username,
-                status: 'pending'
-              }
-            ]);
-          
-          if (insertError) {
-            console.error('Error sending VIP request:', insertError);
-            throw insertError;
-          }
-          
-          console.log('VIP request sent successfully');
-          
-          // Show VIP request modal
-          if (requestVipModal) requestVipModal.style.display = 'flex';
-        } catch (error) {
-          console.error('Error sending VIP request:', error);
-          alert('Gagal mengirim permintaan: ' + (error.message || 'Terjadi kesalahan'));
-        }
-      });
-    }
-    
-    if (logoutButton) {
-      logoutButton.addEventListener('click', logoutUser);
-    }
-  } catch (error) {
-    console.error('Error checking authentication:', error);
-  }
-  
-  // Close modals
-  document.querySelectorAll('.close-modal, .close-modal-btn').forEach(button => {
-    button.addEventListener('click', function() {
-      const modal = this.closest('.modal');
-      if (modal) modal.style.display = 'none';
-    });
-  });
-  
-  // Close modal by clicking outside
-  window.addEventListener('click', function(event) {
-    if (event.target.classList.contains('modal')) {
-      event.target.style.display = 'none';
-    }
-  });
-  
-  // Handle password change form
+
+  // Set up event listeners for change password form
   const changePasswordForm = document.getElementById('changePasswordForm');
   if (changePasswordForm) {
     changePasswordForm.addEventListener('submit', async function(e) {
       e.preventDefault();
-      
-      const currentPassword = document.getElementById('currentPassword').value;
-      const newPassword = document.getElementById('newPassword').value;
-      const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-      const errorElement = document.getElementById('passwordError');
-      
-      // Validate password match
-      if (newPassword !== confirmNewPassword) {
-        errorElement.textContent = 'Password baru tidak cocok';
-        errorElement.style.display = 'block';
-        return;
-      }
-      
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          throw new Error('Tidak ada sesi yang aktif');
-        }
-        
-        // First, verify current password by signing in
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: data.session.user.email,
-          password: currentPassword
-        });
-        
-        if (signInError) throw new Error('Password saat ini salah');
-        
-        // Then update password
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-        
-        if (error) throw error;
-        
-        // Show success message
-        errorElement.textContent = 'Password berhasil diubah';
-        errorElement.style.color = '#4CAF50';
-        errorElement.style.display = 'block';
-        
-        // Reset form and close modal after 2 seconds
-        changePasswordForm.reset();
-        setTimeout(() => {
-          const modal = document.getElementById('changePasswordModal');
-          if (modal) modal.style.display = 'none';
-          errorElement.style.display = 'none';
-          errorElement.style.color = '#FF3B30';
-        }, 2000);
-      } catch (error) {
-        console.error('Error changing password:', error);
-        errorElement.textContent = 'Gagal mengubah password: ' + (error.message || 'Terjadi kesalahan');
-        errorElement.style.display = 'block';
-      }
+      await changePassword();
     });
   }
+
+  // Set up event listeners for closing modals
+  const closeModalButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+  closeModalButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const modal = this.closest('.modal');
+      if (modal) {
+        closeModal(modal.id);
+      }
+    });
+  });
 });
 
-// Function to load user profile data
-async function loadUserProfile(userId) {
+// Function to load user profile
+async function loadUserProfile() {
+  console.log("Loading user profile...");
   try {
-    console.log('Loading profile for user:', userId);
+    // Get user from authenticated session
+    const { data: { user }, error: authError } = await window.supabase.auth.getUser();
     
-    // Fetch user metadata from auth.users
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    
-    if (userError) {
-      console.error('Error fetching user data:', userError);
-    } else {
-      console.log('User data from auth:', userData);
+    if (authError) {
+      console.error("Auth error:", authError);
+      throw authError;
     }
     
-    const { data: profile, error } = await supabase
+    if (!user) {
+      console.log("No authenticated user found");
+      return;
+    }
+
+    console.log("User authenticated:", user.id);
+
+    // Get user profile from profiles table
+    const { data: profile, error: profileError } = await window.supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
-    
-    if (error) {
-      console.error('Error fetching profile:', error);
-      
-      // If profile doesn't exist, try to create one using metadata
-      if (error.code === 'PGRST116') {
-        console.log('Profile not found, creating from user metadata');
-        
-        if (userData && userData.user) {
-          const username = userData.user.user_metadata?.username || userData.user.email?.split('@')[0] || 'User';
-          
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: userId,
-                username: username,
-                email: userData.user.email,
-                role: 'user'
-              }
-            ])
-            .select()
-            .single();
-            
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-            throw insertError;
-          }
-          
-          console.log('Created new profile:', newProfile);
-          return await loadUserProfile(userId); // Reload after creating
-        }
-      }
-      throw error;
+
+    if (profileError) {
+      console.error("Profile error:", profileError);
+      throw profileError;
     }
-    
-    if (profile) {
-      console.log('Profile loaded successfully:', profile);
-      
-      // Update profile elements
-      document.querySelectorAll('#profileUsername, #detailUsername').forEach(element => {
-        if (element) element.textContent = profile.username;
-      });
-      
-      if (document.getElementById('detailEmail')) {
-        document.getElementById('detailEmail').textContent = profile.email || '-';
-      }
-      
-      if (document.getElementById('detailRole')) {
-        document.getElementById('detailRole').textContent = profile.role === 'admin' ? 'Admin' : 
-                                                           profile.role === 'vip' ? 'VIP' : 'Regular';
-      }
-      
-      if (document.getElementById('userRole')) {
-        document.getElementById('userRole').textContent = profile.role === 'admin' ? 'Admin' : 
-                                                         profile.role === 'vip' ? 'VIP' : 'Regular';
-        document.getElementById('userRole').className = 'user-role ' + profile.role;
-      }
-      
-      if (document.getElementById('detailJoined')) {
-        const createdDate = new Date(profile.created_at).toLocaleDateString('id-ID');
-        document.getElementById('detailJoined').textContent = createdDate;
-      }
-      
-      // Show expiration date if the user is VIP
-      const vipExpirationContainer = document.getElementById('vipExpirationContainer');
-      const detailExpiration = document.getElementById('detailExpiration');
-      const vipExpirationDate = document.getElementById('vipExpirationDate');
-      const vipExpirationNote = document.getElementById('vipExpirationNote');
-      
-      if (profile.role === 'vip' && profile.expiration_date) {
-        const expirationDate = new Date(profile.expiration_date);
-        const now = new Date();
-        const formattedDate = expirationDate.toLocaleString('id-ID', {
-          year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        });
-        
-        if (vipExpirationContainer) vipExpirationContainer.style.display = 'flex';
-        if (detailExpiration) detailExpiration.textContent = formattedDate;
-        if (vipExpirationDate) vipExpirationDate.textContent = formattedDate;
-        if (vipExpirationNote) vipExpirationNote.style.display = 'block';
-        
-        // Add expiration warning if it's close
-        const daysLeft = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-        
-        if (daysLeft <= 7 && daysLeft > 0) {
-          if (detailExpiration) {
-            detailExpiration.innerHTML = `${formattedDate} <span class="expiration-warning">(${daysLeft} hari lagi)</span>`;
-          }
-          if (vipExpirationDate) {
-            vipExpirationDate.innerHTML = `${formattedDate} <span class="expiration-warning">(${daysLeft} hari lagi)</span>`;
-          }
-        } else if (daysLeft <= 0) {
-          // Handle expired VIP (this should be handled by the database function, but show it anyway)
-          if (detailExpiration) {
-            detailExpiration.innerHTML = `<span class="expired-date">Kedaluwarsa</span>`;
-          }
-          if (vipExpirationDate) {
-            vipExpirationDate.innerHTML = `<span class="expired-date">Kedaluwarsa</span>`;
-          }
-        }
-      } else if (profile.role === 'vip') {
-        // VIP with no expiration date
-        if (vipExpirationContainer) vipExpirationContainer.style.display = 'flex';
-        if (detailExpiration) detailExpiration.textContent = 'Tanpa batas';
-        if (vipExpirationDate) vipExpirationDate.textContent = 'Tanpa batas';
-        if (vipExpirationNote) vipExpirationNote.style.display = 'block';
-      } else {
-        // Not VIP
-        if (vipExpirationContainer) vipExpirationContainer.style.display = 'none';
-        if (vipExpirationNote) vipExpirationNote.style.display = 'none';
-      }
-      
-      // Show/hide VIP cards based on role
-      const regularUserCard = document.getElementById('regularUserCard');
-      const vipUserCard = document.getElementById('vipUserCard');
-      
-      if (profile.role === 'vip' || profile.role === 'admin') {
-        if (regularUserCard) regularUserCard.style.display = 'none';
-        if (vipUserCard) vipUserCard.style.display = 'block';
-      } else {
-        if (regularUserCard) regularUserCard.style.display = 'block';
-        if (vipUserCard) vipUserCard.style.display = 'none';
-      }
+
+    if (!profile) {
+      console.error("Profile not found for user:", user.id);
+      showToast("Profil tidak ditemukan", "error");
+      return;
     }
+
+    console.log("User profile loaded:", profile);
+
+    // Update the DOM with user info
+    updateUserInterface(profile, user);
+    
+    // Check if user is admin and show admin link if true
+    const adminLink = document.getElementById('adminLink');
+    if (adminLink && profile.role === 'admin') {
+      adminLink.style.display = 'block';
+    }
+
   } catch (error) {
-    console.error('Error loading user profile:', error);
-    // Handle error (e.g., show a message to the user)
+    console.error("Error loading user profile:", error);
+    showToast("Terjadi kesalahan saat memuat profil", "error");
   }
 }
 
-// Function to logout
-async function logoutUser() {
+// Function to update the user interface with profile data
+function updateUserInterface(profile, user) {
+  // Update username
+  const profileUsername = document.getElementById('profileUsername');
+  const detailUsername = document.getElementById('detailUsername');
+  if (profileUsername) profileUsername.textContent = profile.username || user.email.split('@')[0];
+  if (detailUsername) detailUsername.textContent = profile.username || user.email.split('@')[0];
+
+  // Update email
+  const detailEmail = document.getElementById('detailEmail');
+  if (detailEmail) detailEmail.textContent = user.email;
+
+  // Update role badge
+  const userRole = document.getElementById('userRole');
+  const detailRole = document.getElementById('detailRole');
+  
+  // Format the role text for display
+  const roleText = profile.role === 'admin' ? 'Admin' : profile.role === 'vip' ? 'VIP' : 'Regular';
+  
+  if (userRole) {
+    userRole.textContent = roleText;
+    userRole.className = `user-role ${profile.role}`;
+  }
+  
+  if (detailRole) detailRole.textContent = roleText;
+
+  // Update join date
+  const detailJoined = document.getElementById('detailJoined');
+  if (detailJoined && profile.created_at) {
+    const joinDate = new Date(profile.created_at);
+    detailJoined.textContent = joinDate.toLocaleDateString('id-ID');
+  }
+
+  // Show/hide appropriate cards based on role
+  const regularUserCard = document.getElementById('regularUserCard');
+  const vipUserCard = document.getElementById('vipUserCard');
+  const vipExpirationContainer = document.getElementById('vipExpirationContainer');
+  const vipExpirationDate = document.getElementById('vipExpirationDate');
+  const detailExpiration = document.getElementById('detailExpiration');
+
+  // Handle VIP status and expiration date
+  if (profile.role === 'vip') {
+    if (regularUserCard) regularUserCard.style.display = 'none';
+    if (vipUserCard) vipUserCard.style.display = 'block';
+    
+    // Handle expiration date display
+    if (profile.expiration_date) {
+      const expDate = new Date(profile.expiration_date);
+      const formattedDate = expDate.toLocaleString('id-ID', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      
+      if (vipExpirationContainer) vipExpirationContainer.style.display = 'block';
+      if (vipExpirationDate) vipExpirationDate.textContent = formattedDate;
+      if (detailExpiration) detailExpiration.textContent = formattedDate;
+    } else {
+      if (vipExpirationDate) vipExpirationDate.textContent = 'Tidak Ada Batas';
+      if (detailExpiration) detailExpiration.textContent = 'Tidak Ada Batas';
+    }
+  } else {
+    if (regularUserCard) regularUserCard.style.display = 'block';
+    if (vipUserCard) vipUserCard.style.display = 'none';
+    if (vipExpirationContainer) vipExpirationContainer.style.display = 'none';
+  }
+}
+
+// Function to request VIP status
+async function requestVipStatus() {
   try {
-    const { error } = await supabase.auth.signOut();
+    const { data: { user }, error: userError } = await window.supabase.auth.getUser();
+    
+    if (userError) throw userError;
+    if (!user) throw new Error("User not authenticated");
+    
+    // Update profile to set requested_vip flag
+    const { error } = await window.supabase
+      .from('profiles')
+      .update({ requested_vip: true })
+      .eq('id', user.id);
+    
+    if (error) throw error;
+    
+    console.log("VIP status requested successfully");
+    return true;
+  } catch (error) {
+    console.error("Error requesting VIP status:", error);
+    throw error;
+  }
+}
+
+// Function to change password
+async function changePassword() {
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+  const passwordError = document.getElementById('passwordError');
+
+  // Reset error message
+  if (passwordError) passwordError.textContent = '';
+
+  // Validate passwords
+  if (newPassword !== confirmNewPassword) {
+    if (passwordError) passwordError.textContent = 'Password baru tidak cocok dengan konfirmasi';
+    return;
+  }
+
+  try {
+    // Change password
+    const { error } = await window.supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) throw error;
+
+    // Password changed successfully
+    showToast('Password berhasil diubah', 'success');
+    closeModal('changePasswordModal');
+    
+    // Clear form
+    document.getElementById('changePasswordForm').reset();
+  } catch (error) {
+    console.error("Error changing password:", error);
+    if (passwordError) passwordError.textContent = error.message || 'Gagal mengubah password';
+  }
+}
+
+// Function to log out
+async function logout() {
+  try {
+    const { error } = await window.supabase.auth.signOut();
     if (error) throw error;
     window.location.href = 'index.html';
   } catch (error) {
-    console.error('Logout failed:', error);
-    alert('Logout gagal: ' + (error.message || 'Terjadi kesalahan'));
+    console.error("Error logging out:", error);
+    showToast("Gagal keluar", "error");
   }
+}
+
+// Function to open modal
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.style.display = 'block';
+}
+
+// Function to close modal
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.style.display = 'none';
+}
+
+// Function to show toast message
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <div class="toast-content">
+      <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Show toast
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 100);
+  
+  // Hide toast after 3 seconds
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
 }

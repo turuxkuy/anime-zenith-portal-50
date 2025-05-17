@@ -566,34 +566,15 @@ async function populateUserForm(userId) {
     form.querySelector('#username').value = user.username || '';
     form.querySelector('#email').value = user.email || '';
     
-    // Setup role dropdown with all available roles
+    // Setup role dropdown
     const roleSelect = form.querySelector('#userRole');
     if (roleSelect) {
-      const roleValue = user.role || 'user';
-      console.log('Setting role select to:', roleValue);
-      
-      // Clear all existing options first
-      while (roleSelect.options.length > 0) {
-        roleSelect.remove(0);
-      }
-      
-      // Add standard role options
-      const roles = ['user', 'vip', 'admin'];
-      roles.forEach(role => {
-        const option = document.createElement('option');
-        option.value = role;
-        option.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-        roleSelect.appendChild(option);
-      });
-      
-      // Set the current role
-      roleSelect.value = roleValue;
-      console.log('Role select value after setting:', roleSelect.value);
+      roleSelect.value = user.role || 'user';
       
       // Show/hide expiration date field based on role
       const expirationDateGroup = document.getElementById('expirationDateGroup');
       if (expirationDateGroup) {
-        expirationDateGroup.style.display = roleValue === 'vip' ? 'block' : 'none';
+        expirationDateGroup.style.display = roleSelect.value === 'vip' ? 'block' : 'none';
         
         // Add event listener to role select to show/hide expiration date field
         roleSelect.addEventListener('change', function() {
@@ -602,15 +583,23 @@ async function populateUserForm(userId) {
       }
     }
     
-    // Set expiration date if available
+    // Format and set expiration date if available
     const expirationDateInput = form.querySelector('#expirationDate');
-    if (expirationDateInput && user.expiration_date) {
-      // Format date for datetime-local input (YYYY-MM-DDThh:mm)
-      const date = new Date(user.expiration_date);
-      const formattedDate = date.toISOString().slice(0, 16);
-      expirationDateInput.value = formattedDate;
-    } else if (expirationDateInput) {
-      expirationDateInput.value = '';
+    if (expirationDateInput) {
+      if (user.expiration_date) {
+        // Format date for datetime-local input (YYYY-MM-DDThh:mm)
+        const date = new Date(user.expiration_date);
+        
+        // Need to adjust for timezone offset to display correctly in local time
+        const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+        const localDate = new Date(date.getTime() - tzOffset);
+        
+        const formattedDate = localDate.toISOString().slice(0, 16);
+        console.log('Setting expiration date input value:', formattedDate);
+        expirationDateInput.value = formattedDate;
+      } else {
+        expirationDateInput.value = '';
+      }
     }
   } catch (error) {
     console.error('Error populating user form:', error);
