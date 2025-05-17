@@ -5,6 +5,13 @@
 async function logout() {
   console.log("Attempting to logout...");
   try {
+    // Clear any local storage items first
+    localStorage.removeItem('auth');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('role');
+    
+    // Sign out from Supabase
     const { error } = await window.supabase.auth.signOut();
     if (error) {
       console.error("Logout error:", error);

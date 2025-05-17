@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -23,6 +24,52 @@
                  typeof supabase !== 'undefined' ? "Available" : "Not available");
     });
   </script>
+  <style>
+    /* Additional styles for better VIP expiration date visibility */
+    #expirationDateGroup {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #2d3748;
+      border-radius: 5px;
+      border-left: 3px solid #805ad5;
+    }
+    
+    #expirationDate {
+      width: 100%;
+      padding: 8px;
+      background-color: #1a202c;
+      color: white;
+      border: 1px solid #4a5568;
+      border-radius: 3px;
+    }
+    
+    #expirationDateGroup small {
+      display: block;
+      margin-top: 5px;
+      color: #a0aec0;
+    }
+    
+    .expired-date {
+      color: #f56565;
+      font-weight: bold;
+    }
+    
+    /* Improve visibility of user edit modal */
+    #userModal .modal-content {
+      max-width: 500px;
+      padding: 25px;
+    }
+    
+    #userForm .form-group {
+      margin-bottom: 20px;
+    }
+    
+    #userForm label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <div class="admin-container">
@@ -308,7 +355,7 @@
                 </select>
               </div>
               <div class="form-group" id="expirationDateGroup">
-                <label for="expirationDate">Masa Aktif VIP</label>
+                <label for="expirationDate"><strong>Masa Aktif VIP</strong></label>
                 <input type="datetime-local" id="expirationDate" name="expirationDate">
                 <small>Kosongkan untuk tidak ada batas masa aktif.</small>
               </div>

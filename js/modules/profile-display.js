@@ -39,6 +39,7 @@ async function loadUserProfile() {
     }
 
     console.log("User profile loaded:", profile);
+    console.log("VIP expiration date:", profile.expiration_date);
 
     // Update the DOM with user info
     updateUserInterface(profile, user);
@@ -116,6 +117,7 @@ function updateUserInterface(profile, user) {
       if (vipExpirationDate) vipExpirationDate.textContent = formattedDate;
       if (detailExpiration) detailExpiration.textContent = formattedDate;
     } else {
+      if (vipExpirationContainer) vipExpirationContainer.style.display = 'block';
       if (vipExpirationDate) vipExpirationDate.textContent = 'Tidak Ada Batas';
       if (detailExpiration) detailExpiration.textContent = 'Tidak Ada Batas';
     }
@@ -125,6 +127,9 @@ function updateUserInterface(profile, user) {
     if (vipExpirationContainer) vipExpirationContainer.style.display = 'none';
   }
 }
+
+// Import showToast from ui-utils
+import { showToast } from './ui-utils.js';
 
 // Export functions for external use
 export { loadUserProfile };

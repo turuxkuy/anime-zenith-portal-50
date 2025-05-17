@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       loginBtn.setAttribute('href', '#');
       loginBtn.addEventListener('click', async function(e) {
         e.preventDefault();
+        console.log("Login button (now logout) clicked");
         await logout();
       });
     }
@@ -113,3 +114,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   });
 });
+
+// Check if the user is logged in - making it globally available
+async function checkLoginStatus() {
+  try {
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase is not defined in checkLoginStatus');
+      return false;
+    }
+    
+    const { data, error } = await window.supabase.auth.getSession();
+    
+    console.log('Auth session check:', data.session ? 'Session exists' : 'No session found');
+    
+    if (error) {
+      console.error('Auth session error:', error);
+      return false;
+    }
+    
+    return !!data.session;
+  } catch (err) {
+    console.error('Error checking auth status:', err);
+    return false;
+  }
+}
+
+// Make checkLoginStatus available in the global scope
+window.checkLoginStatus = checkLoginStatus;

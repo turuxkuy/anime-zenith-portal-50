@@ -878,68 +878,44 @@ async function handleUserSubmit(event) {
 
     // Show loading toast
     showToast('Updating user...', 'info');
+
+    // Prepare the update data
+    let updateData = { role: userRole };
     
-    // Use the update-user-role Edge Function instead of direct update
-    // This ensures admin permissions are properly enforced for role changes
-    if (userRole === 'user' || userRole === 'vip' || userRole === 'admin') {
-      const { data: updateRoleResult, error: updateRoleError } = await window.supabase.functions.invoke(
-        'update-user-role', 
-        { 
-          body: { 
-            userId: userId, 
-            newRole: userRole,
-            adminId: session.user.id
-          } 
-        }
-      );
-      
-      if (updateRoleError) {
-        console.error('Error updating user role:', updateRoleError);
-        showToast('Failed to update user role: ' + (updateRoleError.message || 'Unknown error'), 'error');
-        return;
-      }
-      
-      console.log('Role update result:', updateRoleResult);
-    }
-    
-    // Now handle the expiration date separately (if role is VIP)
+    // Handle expiration date for VIP users
     if (userRole === 'vip') {
-      let updateData = {};
-      
       if (expirationDate) {
-        // Convert local datetime-local format to ISO string for proper timezone handling
+        // Convert local datetime-local format to ISO string
         const localDate = new Date(expirationDate);
-        
-        // Add timezone offset to ensure correct UTC time
         updateData.expiration_date = localDate.toISOString();
-        
         console.log('Setting expiration date:', updateData.expiration_date);
       } else {
-        updateData.expiration_date = null; // No expiration
+        // If no date provided but user is VIP, set to null (no expiration)
+        updateData.expiration_date = null;
+        console.log('Setting unlimited VIP with no expiration');
       }
-      
-      console.log('Update expiration data:', updateData);
-
-      // Update the expiration date directly in the profiles table
-      const { data, error } = await window.supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', userId)
-        .select();
-      
-      if (error) {
-        console.error('Error updating expiration date:', error);
-        showToast(`Failed to update expiration date: ${error.message}`, 'error');
-        return;
-      }
-      
-      console.log('Expiration date updated successfully:', data);
+    } else {
+      // If user is not VIP, clear the expiration date
+      updateData.expiration_date = null;
     }
     
+    // Update user directly in the profiles table
+    const { data, error } = await window.supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select();
+    
+    if (error) {
+      console.error('Error updating user:', error);
+      showToast(`Failed to update user: ${error.message}`, 'error');
+      return;
+    }
+    
+    console.log('User updated successfully:', data);
     showToast('User updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
-
   } catch (error) {
     console.error('Error handling user form:', error);
     showToast(`An error occurred: ${error.message}`, 'error');
