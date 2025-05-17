@@ -585,21 +585,28 @@ async function populateUserForm(userId) {
     
     // Format and set expiration date if available
     const expirationDateInput = form.querySelector('#expirationDate');
-    if (expirationDateInput) {
-      if (user.expiration_date) {
-        // Format date for datetime-local input (YYYY-MM-DDThh:mm)
+    if (expirationDateInput && user.expiration_date) {
+      try {
+        // Create a Date object from the timestamp
         const date = new Date(user.expiration_date);
         
-        // Need to adjust for timezone offset to display correctly in local time
-        const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
-        const localDate = new Date(date.getTime() - tzOffset);
+        // Format the date for datetime-local input (YYYY-MM-DDThh:mm)
+        // Need to adjust for timezone to display in local time
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
         
-        const formattedDate = localDate.toISOString().slice(0, 16);
+        const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
         console.log('Setting expiration date input value:', formattedDate);
         expirationDateInput.value = formattedDate;
-      } else {
+      } catch (dateError) {
+        console.error('Error formatting date:', dateError);
         expirationDateInput.value = '';
       }
+    } else if (expirationDateInput) {
+      expirationDateInput.value = '';
     }
   } catch (error) {
     console.error('Error populating user form:', error);
@@ -843,7 +850,7 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    // Get the current session to verify authentication
+    // Get the current admin's session
     const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
     if (sessionError || !session) {
       console.error('Session error:', sessionError || 'No active session');
@@ -869,41 +876,66 @@ async function handleUserSubmit(event) {
       return;
     }
 
-    // Prepare update data
-    const updateData = {
-      role: userRole
-    };
-    
-    // Only set expiration_date if the role is VIP and the date is provided
-    if (userRole === 'vip') {
-      if (expirationDate) {
-        updateData.expiration_date = new Date(expirationDate).toISOString();
-      } else {
-        updateData.expiration_date = null; // No expiration
-      }
-    } else {
-      updateData.expiration_date = null; // Clear expiration if not VIP
-    }
-    
-    console.log('Update data:', updateData);
-
     // Show loading toast
     showToast('Updating user...', 'info');
     
-    // Update the user directly in the profiles table
-    const { data, error } = await window.supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
-      .select();
-    
-    if (error) {
-      console.error('Error updating user:', error);
-      showToast(`Failed to update user: ${error.message}`, 'error');
-      return;
+    // Use the update-user-role Edge Function instead of direct update
+    // This ensures admin permissions are properly enforced for role changes
+    if (userRole === 'user' || userRole === 'vip' || userRole === 'admin') {
+      const { data: updateRoleResult, error: updateRoleError } = await window.supabase.functions.invoke(
+        'update-user-role', 
+        { 
+          body: { 
+            userId: userId, 
+            newRole: userRole,
+            adminId: session.user.id
+          } 
+        }
+      );
+      
+      if (updateRoleError) {
+        console.error('Error updating user role:', updateRoleError);
+        showToast('Failed to update user role: ' + (updateRoleError.message || 'Unknown error'), 'error');
+        return;
+      }
+      
+      console.log('Role update result:', updateRoleResult);
     }
     
-    console.log('User updated successfully:', data);
+    // Now handle the expiration date separately (if role is VIP)
+    if (userRole === 'vip') {
+      let updateData = {};
+      
+      if (expirationDate) {
+        // Convert local datetime-local format to ISO string for proper timezone handling
+        const localDate = new Date(expirationDate);
+        
+        // Add timezone offset to ensure correct UTC time
+        updateData.expiration_date = localDate.toISOString();
+        
+        console.log('Setting expiration date:', updateData.expiration_date);
+      } else {
+        updateData.expiration_date = null; // No expiration
+      }
+      
+      console.log('Update expiration data:', updateData);
+
+      // Update the expiration date directly in the profiles table
+      const { data, error } = await window.supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Error updating expiration date:', error);
+        showToast(`Failed to update expiration date: ${error.message}`, 'error');
+        return;
+      }
+      
+      console.log('Expiration date updated successfully:', data);
+    }
+    
     showToast('User updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
