@@ -1,79 +1,81 @@
 
-// Supabase client configuration
-const SUPABASE_URL = "https://eguwfitbjuzzwbgalwcx.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVndXdmaXRianV6endiZ2Fsd2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1NDQ4OTgsImV4cCI6MjA2MjEyMDg5OH0.nYgvViJgO67L5nNYEejoW5KajcXlryTThTzA1bvUO9k";
+// Supabase configuration
+const supabaseUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVndXdmaXRianV6endiZ2Fsd2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1NDQ4OTgsImV4cCI6MjA2MjEyMDg5OH0.nYgvViJgO67L5nNYEejoW5KajcXlryTThTzA1bvUO9k';
 
-// Initialize the Supabase client
-window.supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    storage: localStorage,
-    storageKey: 'zenith-donghua-auth'
-  },
-  global: {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+// Initialize Supabase client
+console.log("Initializing Supabase client...");
+
+try {
+  // Create the Supabase client
+  window.supabase = supabase.createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      storage: window.localStorage
     }
-  }
-});
+  });
+  
+  console.log('Supabase client initialized successfully');
+  
+  // Test connection
+  window.supabase
+    .from('donghua')
+    .select('count', { count: 'exact', head: true })
+    .then(result => {
+      console.log('Connection test result:', result);
+    })
+    .catch(err => {
+      console.error('Connection test failed:', err);
+    });
+    
+} catch (error) {
+  console.error('Failed to initialize Supabase client:', error);
+}
 
-// Test connection to Supabase
-console.log("Initializing Supabase connection...");
-window.supabase.auth.onAuthStateChange((event, session) => {
-  console.log("Auth state changed:", event, session ? "User is logged in" : "No active session");
-});
-
-// Function to update user role (admin only)
-async function updateUserRole(userId, newRole, adminId) {
+// Function to check if logged in - can be used across pages
+async function checkLoginStatus() {
   try {
-    // Validate inputs
-    if (!userId || !newRole || !adminId) {
-      throw new Error('Missing required fields');
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase is not defined in checkLoginStatus');
+      return false;
     }
     
-    // Check if admin is authenticated
-    const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+    const { data, error } = await window.supabase.auth.getSession();
     
-    if (sessionError || !session) {
-      throw new Error('Admin not authenticated');
-    }
+    console.log('Auth session check:', data.session ? 'Session exists' : 'No session found');
     
-    // Verify that the current user is an admin
-    const { data: adminData, error: adminError } = await window.supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', adminId)
-      .single();
-      
-    if (adminError || !adminData || adminData.role !== 'admin') {
-      throw new Error('Unauthorized: Only admins can update user roles');
-    }
-    
-    // Validate that newRole is one of allowed values
-    const validRoles = ['user', 'vip', 'admin'];
-    if (!validRoles.includes(newRole)) {
-      throw new Error('Invalid role specified');
-    }
-    
-    // Update user role
-    const { data, error } = await window.supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId)
-      .select();
-      
     if (error) {
-      throw error;
+      console.error('Auth session error:', error);
+      return false;
     }
     
-    console.log('Role update successful:', data);
-    return { success: true, data };
-  } catch (error) {
-    console.error('Error updating user role:', error);
-    throw error;
+    return !!data.session;
+  } catch (err) {
+    console.error('Error checking auth status:', err);
+    return false;
+  }
+}
+
+// Function to get user details - for displaying username, etc.
+async function getCurrentUser() {
+  try {
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase is not defined in getCurrentUser');
+      return null;
+    }
+    
+    const { data, error } = await window.supabase.auth.getSession();
+    
+    if (error || !data.session) {
+      console.log('No current user found');
+      return null;
+    }
+    
+    console.log('Current user ID:', data.session.user.id);
+    return data.session.user;
+  } catch (err) {
+    console.error('Error getting current user:', err);
+    return null;
   }
 }

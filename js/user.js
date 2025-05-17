@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   const profileContainer = document.getElementById('profileContainer');
   const adminLink = document.getElementById('adminLink');
   const loginBtn = document.getElementById('loginBtn');
-  const logoutButton = document.getElementById('logoutButton');
   
   if (isLoggedIn) {
     // User is logged in
@@ -24,16 +23,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       loginBtn.setAttribute('href', '#');
       loginBtn.addEventListener('click', async function(e) {
         e.preventDefault();
-        await logout();
-      });
-    }
-
-    // Set up logout button event listener
-    if (logoutButton) {
-      console.log("Setting up logout button");
-      logoutButton.addEventListener('click', async function(e) {
-        e.preventDefault();
-        console.log("Logout button clicked");
         await logout();
       });
     }
@@ -195,8 +184,6 @@ function updateUserInterface(profile, user) {
 
   // Handle VIP status and expiration date
   if (profile.role === 'vip') {
-    console.log("User is VIP, expiration date:", profile.expiration_date);
-    
     if (regularUserCard) regularUserCard.style.display = 'none';
     if (vipUserCard) vipUserCard.style.display = 'block';
     
@@ -207,8 +194,6 @@ function updateUserInterface(profile, user) {
         year: 'numeric', month: 'short', day: 'numeric',
         hour: '2-digit', minute: '2-digit'
       });
-      
-      console.log("Formatted expiration date:", formattedDate);
       
       if (vipExpirationContainer) vipExpirationContainer.style.display = 'block';
       if (vipExpirationDate) vipExpirationDate.textContent = formattedDate;
@@ -284,33 +269,11 @@ async function changePassword() {
   }
 }
 
-// Function to check login status
-async function checkLoginStatus() {
-  try {
-    const { data: { session }, error } = await window.supabase.auth.getSession();
-    
-    if (error) {
-      console.error("Session error:", error);
-      return false;
-    }
-    
-    return !!session;
-  } catch (error) {
-    console.error("Error checking login status:", error);
-    return false;
-  }
-}
-
 // Function to log out
 async function logout() {
-  console.log("Attempting to logout...");
   try {
     const { error } = await window.supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error);
-      throw error;
-    }
-    console.log("Logout successful, redirecting...");
+    if (error) throw error;
     window.location.href = 'index.html';
   } catch (error) {
     console.error("Error logging out:", error);
