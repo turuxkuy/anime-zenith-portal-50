@@ -884,41 +884,70 @@ async function handleUserSubmit(event) {
     // Show loading toast
     showToast('Updating user...', 'info');
 
-    // Prepare the update data
-    let updateData = { role: userRole };
-    
-    // Handle expiration date for VIP users
-    if (userRole === 'vip') {
-      if (expirationDate) {
+    // Check if we need to use the Edge Function for sensitive updates
+    if (userRole === 'admin' || userRole === 'vip') {
+      // For admin/VIP role changes, use the Edge Function with service role key
+      const functionUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co/functions/v1/update-user-role';
+      
+      // Prepare request payload
+      const payload = { 
+        userId: userId,
+        newRole: userRole,
+        adminId: session.user.id
+      };
+      
+      // Add expiration date for VIP users if provided
+      if (userRole === 'vip' && expirationDate) {
         // Convert local datetime-local format to ISO string
         const localDate = new Date(expirationDate);
-        updateData.expiration_date = localDate.toISOString();
-        console.log('Setting expiration date:', updateData.expiration_date);
-      } else {
-        // If no date provided but user is VIP, set to null (no expiration)
-        updateData.expiration_date = null;
-        console.log('Setting unlimited VIP with no expiration');
+        payload.expirationDate = localDate.toISOString();
+        console.log('Setting expiration date via Edge Function:', payload.expirationDate);
       }
+      
+      console.log('Sending payload to Edge Function:', payload);
+      
+      // Call the Edge Function to update user role with service role key
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('Error from Edge Function:', result);
+        showToast(`Failed to update user role: ${result.error || 'Unknown error'}`, 'error');
+        return;
+      }
+      
+      console.log('Edge Function response:', result);
+      showToast('User updated successfully!', 'success');
     } else {
-      // If user is not VIP, clear the expiration date
-      updateData.expiration_date = null;
+      // For regular user role, we can use direct update
+      const updateData = { role: userRole, expiration_date: null };
+      
+      console.log('Updating user directly:', updateData);
+      
+      const { data, error } = await window.supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Error updating user:', error);
+        showToast(`Failed to update user: ${error.message}`, 'error');
+        return;
+      }
+      
+      console.log('User updated successfully:', data);
+      showToast('User updated successfully!', 'success');
     }
     
-    // Update user directly in the profiles table
-    const { data, error } = await window.supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
-      .select();
-    
-    if (error) {
-      console.error('Error updating user:', error);
-      showToast(`Failed to update user: ${error.message}`, 'error');
-      return;
-    }
-    
-    console.log('User updated successfully:', data);
-    showToast('User updated successfully!', 'success');
     closeModal('userModal');
     loadUsersList();
   } catch (error) {
