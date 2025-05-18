@@ -29,7 +29,7 @@ serve(async (req) => {
 
     // Get request data
     const requestData = await req.json()
-    const { userId, newRole, adminId } = requestData
+    const { userId, newRole, adminId, expirationDate } = requestData
     
     if (!userId || !newRole || !adminId) {
       return new Response(
@@ -64,10 +64,24 @@ serve(async (req) => {
     // Log the operation attempt
     console.log(`Admin ${adminId} attempting to update user ${userId} to role ${newRole}`)
     
-    // Update user role with service role key (bypassing RLS)
+    // Prepare update data
+    const updateData = { role: newRole }
+    
+    // Add expiration date for VIP users if provided
+    if (newRole === 'vip' && expirationDate) {
+      updateData.expiration_date = expirationDate
+    } else if (newRole === 'vip') {
+      updateData.expiration_date = null // No expiration date for VIP
+    } else {
+      updateData.expiration_date = null // Not VIP, no expiration
+    }
+    
+    console.log('Update data:', updateData)
+    
+    // Update user role and expiration date with service role key (bypassing RLS)
     const { data, error } = await supabase
       .from('profiles')
-      .update({ role: newRole })
+      .update(updateData)
       .eq('id', userId)
       .select()
       

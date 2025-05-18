@@ -25,5 +25,8 @@ async function logout() {
   }
 }
 
+// Import helper functions
+import { showToast } from './ui-utils.js';
+
 // Export functions for external use
 export { logout };

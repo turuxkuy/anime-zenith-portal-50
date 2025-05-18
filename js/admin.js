@@ -151,6 +151,11 @@ async function logout() {
 // Function to navigate between admin pages
 function navigate(event) {
   const page = event.target.closest('.admin-menu-item').dataset.page;
+  if (page === 'logoutBtn') {
+    logout();
+    return;
+  }
+  
   const adminPages = document.querySelectorAll('.admin-page');
   const adminMenuItems = document.querySelectorAll('.admin-menu-item');
   const pageTitle = document.getElementById('pageTitle');
