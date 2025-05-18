@@ -29,7 +29,7 @@ serve(async (req) => {
 
     // Get request data
     const requestData = await req.json()
-    const { userId, newRole, adminId, expirationDate } = requestData
+    const { userId, newRole, adminId, vip_expired_at } = requestData
     
     if (!userId || !newRole || !adminId) {
       return new Response(
@@ -67,18 +67,20 @@ serve(async (req) => {
     // Prepare update data
     const updateData = { role: newRole }
     
-    // Add expiration date for VIP users if provided
-    if (newRole === 'vip' && expirationDate) {
-      updateData.expiration_date = expirationDate
+    // Add vip_expired_at for VIP users if provided
+    if (newRole === 'vip' && vip_expired_at) {
+      updateData.vip_expired_at = vip_expired_at
+      console.log(`Setting VIP expiration date: ${vip_expired_at}`)
     } else if (newRole === 'vip') {
-      updateData.expiration_date = null // No expiration date for VIP
+      updateData.vip_expired_at = null // No expiration date for VIP
+      console.log('No VIP expiration date specified')
     } else {
-      updateData.expiration_date = null // Not VIP, no expiration
+      updateData.vip_expired_at = null // Not VIP, no expiration
     }
     
     console.log('Update data:', updateData)
     
-    // Update user role and expiration date with service role key (bypassing RLS)
+    // Update user role and vip_expired_at with service role key (bypassing RLS)
     const { data, error } = await supabase
       .from('profiles')
       .update(updateData)

@@ -306,7 +306,7 @@ async function loadUsersList() {
     
     const { data: users, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role, created_at, expiration_date')
+      .select('id, username, email, role, created_at, vip_expired_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -330,14 +330,14 @@ async function loadUsersList() {
         
         // Format expiration date if it exists
         let expirationText = '-';
-        if (user.expiration_date) {
-          const expDate = new Date(user.expiration_date);
+        if (user.vip_expired_at) {
+          const expDate = new Date(user.vip_expired_at);
           const now = new Date();
           
           if (expDate < now && user.role === 'vip') {
             expirationText = '<span class="expired-date">Kedaluwarsa</span>';
           } else {
-            expirationText = new Date(user.expiration_date).toLocaleString('id-ID', {
+            expirationText = new Date(user.vip_expired_at).toLocaleString('id-ID', {
               year: 'numeric', month: 'short', day: 'numeric',
               hour: '2-digit', minute: '2-digit'
             });
@@ -548,7 +548,7 @@ async function populateUserForm(userId) {
     // Fetch user data with explicit error handling
     const { data: user, error } = await window.supabase
       .from('profiles')
-      .select('id, username, email, role, expiration_date')
+      .select('id, username, email, role, vip_expired_at')
       .eq('id', userId)
       .single();
 
@@ -590,10 +590,10 @@ async function populateUserForm(userId) {
     
     // Format and set expiration date if available
     const expirationDateInput = form.querySelector('#expirationDate');
-    if (expirationDateInput && user.expiration_date) {
+    if (expirationDateInput && user.vip_expired_at) {
       try {
         // Create a Date object from the timestamp
-        const date = new Date(user.expiration_date);
+        const date = new Date(user.vip_expired_at);
         
         // Format the date for datetime-local input (YYYY-MM-DDThh:mm)
         // Need to adjust for timezone to display in local time
@@ -896,12 +896,12 @@ async function handleUserSubmit(event) {
         adminId: session.user.id
       };
       
-      // Add expiration date for VIP users if provided
+      // Add vip_expired_at for VIP users if provided
       if (userRole === 'vip' && expirationDate) {
         // Convert local datetime-local format to ISO string
         const localDate = new Date(expirationDate);
-        payload.expirationDate = localDate.toISOString();
-        console.log('Setting expiration date via Edge Function:', payload.expirationDate);
+        payload.vip_expired_at = localDate.toISOString();
+        console.log('Setting VIP expiration date via Edge Function:', payload.vip_expired_at);
       }
       
       console.log('Sending payload to Edge Function:', payload);
@@ -928,7 +928,7 @@ async function handleUserSubmit(event) {
       showToast('User updated successfully!', 'success');
     } else {
       // For regular user role, we can use direct update
-      const updateData = { role: userRole, expiration_date: null };
+      const updateData = { role: userRole, vip_expired_at: null };
       
       console.log('Updating user directly:', updateData);
       
