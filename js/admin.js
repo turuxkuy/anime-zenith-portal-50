@@ -879,20 +879,29 @@ async function handleUserSubmit(event) {
     // Show loading toast
     showToast('Updating user...', 'info');
 
-    // Use the update_user_role function with correct parameter order
-    const { data: updateRoleResult, error: updateRoleError } = await window.supabase
-      .rpc('update_user_role', {
-        user_id: userId,
-        new_role: userRole
-      });
+    // Call the edge function to update user role
+    const response = await fetch('https://eguwfitbjuzzwbgalwcx.supabase.co/functions/v1/update-user-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`
+      },
+      body: JSON.stringify({
+        userId: userId,
+        newRole: userRole,
+        adminId: session.user.id
+      })
+    });
+
+    const result = await response.json();
     
-    if (updateRoleError) {
-      console.error('Error updating user role:', updateRoleError);
-      showToast('Failed to update user role: ' + (updateRoleError.message || 'Unknown error'), 'error');
+    if (!response.ok) {
+      console.error('Error updating user role:', result);
+      showToast('Failed to update user role: ' + (result.error || 'Unknown error'), 'error');
       return;
     }
     
-    console.log('Role update result:', updateRoleResult);
+    console.log('Role update result:', result);
     
     // Now handle the expiration date separately (if role is VIP)
     if (userRole === 'vip') {
@@ -904,10 +913,12 @@ async function handleUserSubmit(event) {
         
         // Add timezone offset to ensure correct UTC time
         updateData.expiration_date = localDate.toISOString();
+        updateData.vip_expired_at = localDate.toISOString(); // Update both date fields
         
-        console.log('Setting expiration date:', updateData.expiration_date);
+        console.log('Setting expiration dates:', updateData);
       } else {
         updateData.expiration_date = null; // No expiration
+        updateData.vip_expired_at = null;  // Clear both fields
       }
       
       console.log('Update expiration data:', updateData);
@@ -925,7 +936,7 @@ async function handleUserSubmit(event) {
         return;
       }
       
-      console.log('Expiration date updated successfully:', data);
+      console.log('Expiration dates updated successfully:', data);
     }
     
     showToast('User updated successfully!', 'success');
