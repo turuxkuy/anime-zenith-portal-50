@@ -1,4 +1,3 @@
-
 // Get elements from the DOM
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('User page loaded');

@@ -64,12 +64,11 @@ serve(async (req) => {
     // Log the operation attempt
     console.log(`Admin ${adminId} attempting to update user ${userId} to role ${newRole}`)
     
-    // Update user role with service role key (bypassing RLS)
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId)
-      .select()
+    // Use the update_user_role function with correct parameter order
+    const { data, error } = await supabase.rpc('update_user_role', {
+      user_id: userId,
+      new_role: newRole
+    })
       
     if (error) {
       console.error('Error updating role:', error)
