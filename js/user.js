@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   const profileContainer = document.getElementById('profileContainer');
   const adminLink = document.getElementById('adminLink');
   const loginBtn = document.getElementById('loginBtn');
+  const logoutButton = document.getElementById('logoutButton');
   
   if (isLoggedIn) {
     // User is logged in
@@ -22,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       loginBtn.textContent = 'Keluar';
       loginBtn.setAttribute('href', '#');
       loginBtn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        await logout();
+      });
+    }
+
+    // Setup logout button
+    if (logoutButton) {
+      logoutButton.addEventListener('click', async function(e) {
         e.preventDefault();
         await logout();
       });

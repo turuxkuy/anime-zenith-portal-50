@@ -112,6 +112,7 @@ export type Database = {
           id: string
           role: string
           username: string
+          vip_expired_at: string | null
         }
         Insert: {
           created_at?: string
@@ -120,6 +121,7 @@ export type Database = {
           id: string
           role?: string
           username: string
+          vip_expired_at?: string | null
         }
         Update: {
           created_at?: string
@@ -128,6 +130,7 @@ export type Database = {
           id?: string
           role?: string
           username?: string
+          vip_expired_at?: string | null
         }
         Relationships: []
       }

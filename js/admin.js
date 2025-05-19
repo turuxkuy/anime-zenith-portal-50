@@ -878,20 +878,14 @@ async function handleUserSubmit(event) {
 
     // Show loading toast
     showToast('Updating user...', 'info');
-    
-    // Use the update-user-role Edge Function instead of direct update
-    // This ensures admin permissions are properly enforced for role changes
+
+    // Use the stored procedure to update user role
     if (userRole === 'user' || userRole === 'vip' || userRole === 'admin') {
-      const { data: updateRoleResult, error: updateRoleError } = await window.supabase.functions.invoke(
-        'update-user-role', 
-        { 
-          body: { 
-            userId: userId, 
-            newRole: userRole,
-            adminId: session.user.id
-          } 
-        }
-      );
+      const { data: updateRoleResult, error: updateRoleError } = await window.supabase
+        .rpc('update_user_role', {
+          user_id: userId,
+          new_role: userRole
+        });
       
       if (updateRoleError) {
         console.error('Error updating user role:', updateRoleError);
