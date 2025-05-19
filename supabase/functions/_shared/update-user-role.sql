@@ -20,3 +20,28 @@ BEGIN
   RETURN FOUND;
 END;
 $$;
+
+-- Create or replace function to update expired VIP users
+CREATE OR REPLACE FUNCTION public.update_expired_vip_status()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  affected_count INTEGER;
+BEGIN
+  -- Update expired VIP users to regular status
+  WITH updated AS (
+    UPDATE public.profiles
+    SET role = 'user'
+    WHERE role = 'vip' 
+      AND vip_expired_at IS NOT NULL 
+      AND vip_expired_at < now()
+    RETURNING id
+  )
+  SELECT COUNT(*) INTO affected_count FROM updated;
+  
+  -- Return the number of users affected
+  RETURN jsonb_build_object('updated_count', affected_count);
+END;
+$function$;
