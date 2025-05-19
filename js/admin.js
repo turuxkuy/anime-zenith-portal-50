@@ -879,22 +879,20 @@ async function handleUserSubmit(event) {
     // Show loading toast
     showToast('Updating user...', 'info');
 
-    // Use the stored procedure to update user role
-    if (userRole === 'user' || userRole === 'vip' || userRole === 'admin') {
-      const { data: updateRoleResult, error: updateRoleError } = await window.supabase
-        .rpc('update_user_role', {
-          user_id: userId,
-          new_role: userRole
-        });
-      
-      if (updateRoleError) {
-        console.error('Error updating user role:', updateRoleError);
-        showToast('Failed to update user role: ' + (updateRoleError.message || 'Unknown error'), 'error');
-        return;
-      }
-      
-      console.log('Role update result:', updateRoleResult);
+    // Use the update_user_role function with correct parameter order
+    const { data: updateRoleResult, error: updateRoleError } = await window.supabase
+      .rpc('update_user_role', {
+        user_id: userId,
+        new_role: userRole
+      });
+    
+    if (updateRoleError) {
+      console.error('Error updating user role:', updateRoleError);
+      showToast('Failed to update user role: ' + (updateRoleError.message || 'Unknown error'), 'error');
+      return;
     }
+    
+    console.log('Role update result:', updateRoleResult);
     
     // Now handle the expiration date separately (if role is VIP)
     if (userRole === 'vip') {
