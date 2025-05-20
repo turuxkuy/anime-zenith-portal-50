@@ -1,3 +1,4 @@
+
 // Get elements from the DOM
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('User page loaded');
@@ -134,6 +135,12 @@ async function loadUserProfile() {
     }
 
     console.log("User profile loaded:", profile);
+    
+    // Debug expiration if exists
+    if (profile.expiration_date) {
+      console.log("Expiration date found:", profile.expiration_date);
+      console.log("Formatted date:", new Date(profile.expiration_date).toLocaleString());
+    }
 
     // Update the DOM with user info
     updateUserInterface(profile, user);
@@ -203,12 +210,16 @@ function updateUserInterface(profile, user) {
         hour: '2-digit', minute: '2-digit'
       });
       
+      console.log("Showing expiration date in UI:", formattedDate);
+      
       if (vipExpirationContainer) vipExpirationContainer.style.display = 'block';
       if (vipExpirationDate) vipExpirationDate.textContent = formattedDate;
       if (detailExpiration) detailExpiration.textContent = formattedDate;
     } else {
+      console.log("No expiration date found for VIP user");
       if (vipExpirationDate) vipExpirationDate.textContent = 'Tidak Ada Batas';
       if (detailExpiration) detailExpiration.textContent = 'Tidak Ada Batas';
+      if (vipExpirationContainer) vipExpirationContainer.style.display = 'block';
     }
   } else {
     if (regularUserCard) regularUserCard.style.display = 'block';
