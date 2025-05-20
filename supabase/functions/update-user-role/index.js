@@ -31,6 +31,8 @@ serve(async (req) => {
     const requestData = await req.json()
     const { userId, newRole, adminId, expirationDate } = requestData
     
+    console.log('Request data:', { userId, newRole, adminId, expirationDate })
+    
     if (!userId || !newRole || !adminId) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
@@ -74,7 +76,10 @@ serve(async (req) => {
     } else if (newRole === 'user') {
       // If changing from VIP to regular user, clear the expiration date
       updateData.expiration_date = null
+      console.log('Clearing expiration date for regular user')
     }
+    
+    console.log('Update data:', updateData)
     
     // Update the user profile directly
     const { data, error } = await supabase

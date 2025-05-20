@@ -411,7 +411,7 @@ function openUserEditModal(user) {
         });
     }
     
-    openModal(modal);
+    openModal('userModal');
 }
 
 // Function to update user role
@@ -425,6 +425,9 @@ async function updateUserRole(userId, newRole, expirationDate) {
         // Update the API endpoint URL
         const apiUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co/functions/v1/update-user-role';
         
+        // Debug expirationDate value
+        console.log('Sending expirationDate:', expirationDate);
+
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -444,6 +447,9 @@ async function updateUserRole(userId, newRole, expirationDate) {
         if (!response.ok) {
             throw new Error(result.error || 'Failed to update user role');
         }
+        
+        // Debug the returned result
+        console.log('Update user role result:', result);
         
         return result;
     } catch (error) {
@@ -506,6 +512,24 @@ function setupImagePreview(inputElement, previewElement) {
         }
     });
 }
+
+// Add a debugging function to check VIP expiration in database
+window.debugVipExpiration = async function(userId) {
+    try {
+        const { data, error } = await window.supabase
+            .from('profiles')
+            .select('role, expiration_date')
+            .eq('id', userId)
+            .single();
+            
+        if (error) throw error;
+        
+        console.log('User role in database:', data.role);
+        console.log('Expiration date in database:', data.expiration_date);
+    } catch (err) {
+        console.error('Error checking VIP expiration:', err);
+    }
+};
 
 // Form submission handlers
 document.addEventListener('DOMContentLoaded', function() {
@@ -712,10 +736,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (expirationInput) {
                     // Convert the local datetime to an ISO string for the server
                     expirationDate = new Date(expirationInput).toISOString();
+                    console.log('Expiration date set to:', expirationDate);
                 }
             }
             
             try {
+                // Debug data being sent
+                console.log('Updating user:', {
+                    userId,
+                    role,
+                    expirationDate
+                });
+                
                 const result = await updateUserRole(userId, role, expirationDate);
                 
                 if (result.success) {
