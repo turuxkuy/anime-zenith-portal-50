@@ -147,6 +147,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      update_user_role: {
+        Args: { user_id: string; new_role: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

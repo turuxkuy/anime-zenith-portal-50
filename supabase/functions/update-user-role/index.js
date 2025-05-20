@@ -64,25 +64,24 @@ serve(async (req) => {
     // Log the operation attempt
     console.log(`Admin ${adminId} attempting to update user ${userId} to role ${newRole}`)
     
-    // Update the user's role directly in the profiles table
-    const { data: updateData, error: updateError } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId)
-      .select();
+    // Use the update_user_role function with correct parameter order
+    const { data, error } = await supabase.rpc('update_user_role', {
+      user_id: userId,
+      new_role: newRole
+    })
       
-    if (updateError) {
-      console.error('Error updating role:', updateError)
+    if (error) {
+      console.error('Error updating role:', error)
       return new Response(
-        JSON.stringify({ error: `Failed to update role: ${updateError.message}` }),
+        JSON.stringify({ error: `Failed to update role: ${error.message}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
     
-    console.log('Role update successful:', updateData)
+    console.log('Role update successful:', data)
     
     return new Response(
-      JSON.stringify({ success: true, data: updateData }),
+      JSON.stringify({ success: true, data }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
