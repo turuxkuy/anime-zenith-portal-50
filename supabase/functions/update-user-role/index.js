@@ -29,7 +29,7 @@ serve(async (req) => {
 
     // Get request data
     const requestData = await req.json()
-    const { userId, newRole, adminId } = requestData
+    const { userId, newRole, adminId, expirationDate } = requestData
     
     if (!userId || !newRole || !adminId) {
       return new Response(
@@ -64,11 +64,24 @@ serve(async (req) => {
     // Log the operation attempt
     console.log(`Admin ${adminId} attempting to update user ${userId} to role ${newRole}`)
     
-    // Use the update_user_role function with correct parameter order
-    const { data, error } = await supabase.rpc('update_user_role', {
-      user_id: userId,
-      new_role: newRole
-    })
+    // Prepare update data
+    const updateData = { role: newRole }
+    
+    // If role is VIP and expiration date is provided, set it
+    if (newRole === 'vip' && expirationDate) {
+      updateData.expiration_date = expirationDate
+      console.log(`Setting expiration date: ${expirationDate}`)
+    } else if (newRole === 'user') {
+      // If changing from VIP to regular user, clear the expiration date
+      updateData.expiration_date = null
+    }
+    
+    // Update the user profile directly
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
       
     if (error) {
       console.error('Error updating role:', error)
