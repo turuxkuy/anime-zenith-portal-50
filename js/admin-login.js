@@ -96,15 +96,9 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         
-        // Admin login successful, save token to localStorage
-        localStorage.setItem('adminToken', data.session.access_token);
-        localStorage.setItem('adminId', data.user.id);
-        
-        // Show success message
+        // Admin login successful, redirect to admin panel
         showToast('Login berhasil! Mengalihkan ke panel admin...', 'success');
         
-        // Admin login successful, redirect to admin panel
-        console.log('Admin authentication successful, redirecting to admin panel');
         setTimeout(() => {
           window.location.href = 'admin.html';
         }, 1000);

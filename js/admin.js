@@ -48,61 +48,97 @@ function closeModal(modalId) {
     }
 }
 
-// Function to check if admin is authenticated
-function checkAdminAuth() {
-    const adminToken = localStorage.getItem('adminToken');
-    const adminId = localStorage.getItem('adminId');
-    
-    if (!adminToken || !adminId) {
-        console.error('Admin not authenticated: No token or ID found');
-        window.location.href = 'login-admin.html';
-        return false;
-    }
-    
-    return true;
-}
-
-// Function to get current user (admin)
+// Function to get current user
 async function getCurrentUser() {
-    if (!checkAdminAuth()) return null;
-    
     try {
-        const adminId = localStorage.getItem('adminId');
         const { data: { user }, error } = await window.supabase.auth.getUser();
         
-        if (error || !user || user.id !== adminId) {
-            console.error('Current user error:', error || 'User ID mismatch');
-            throw new Error('Admin tidak terautentikasi');
+        if (error) {
+            console.error('Error getting current user:', error);
+            throw error;
+        }
+        
+        if (!user) {
+            console.error('No user found');
+            throw new Error('User not authenticated');
         }
         
         return user;
     } catch (error) {
-        console.error('Error getting current user:', error);
-        showToast('Sesi admin telah berakhir. Silakan login kembali.', 'error');
+        console.error('Error in getCurrentUser:', error);
+        showToast('Sesi telah berakhir. Silakan login kembali.', 'error');
         setTimeout(() => {
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('adminId');
             window.location.href = 'login-admin.html';
-        }, 1500);
+        }, 2000);
         return null;
+    }
+}
+
+// Function to check admin authentication
+async function checkAdminAuth() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return false;
+        
+        // Check if user has admin role
+        const { data: profile, error: profileError } = await window.supabase
+            .from('profiles')
+            .select('role, username')
+            .eq('id', user.id)
+            .single();
+            
+        if (profileError) {
+            console.error('Error fetching admin profile:', profileError);
+            showToast('Gagal memverifikasi profil admin', 'error');
+            return false;
+        }
+        
+        if (!profile || profile.role !== 'admin') {
+            console.error('User is not an admin:', profile?.role || 'no profile');
+            showToast('Akses ditolak: Anda bukan administrator', 'error');
+            await window.supabase.auth.signOut();
+            setTimeout(() => {
+                window.location.href = 'login-admin.html';
+            }, 2000);
+            return false;
+        }
+        
+        // Update admin name in header
+        const adminName = document.getElementById('adminName');
+        if (adminName && profile.username) {
+            adminName.textContent = profile.username;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Admin auth check failed:', error);
+        showToast('Autentikasi admin gagal', 'error');
+        setTimeout(() => {
+            window.location.href = 'login-admin.html';
+        }, 2000);
+        return false;
     }
 }
 
 // Function to update user role
 async function updateUserRole(userId, newRole, expirationDate) {
     try {
-        if (!checkAdminAuth()) {
+        // Get the current user to verify they're an admin
+        const user = await getCurrentUser();
+        if (!user) {
             throw new Error('Admin tidak terautentikasi');
         }
         
-        const adminId = localStorage.getItem('adminId');
-        const adminToken = localStorage.getItem('adminToken');
-        
-        if (!adminId || !adminToken) {
-            throw new Error('Data admin tidak ditemukan');
+        // Get the current session to get the authorization token
+        const { data: sessionData } = await window.supabase.auth.getSession();
+        if (!sessionData || !sessionData.session) {
+            throw new Error('Sesi tidak valid');
         }
         
-        console.log('Admin credentials for update:', { adminId, tokenExists: !!adminToken });
+        const adminId = user.id;
+        const accessToken = sessionData.session.access_token;
+        
+        console.log('Admin credentials for update:', { adminId, hasToken: !!accessToken });
         
         // Update the API endpoint URL
         const apiUrl = 'https://eguwfitbjuzzwbgalwcx.supabase.co/functions/v1/update-user-role';
@@ -118,7 +154,7 @@ async function updateUserRole(userId, newRole, expirationDate) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminToken}`
+                'Authorization': `Bearer ${accessToken}`
             },
             body: JSON.stringify({
                 userId,
@@ -141,6 +177,28 @@ async function updateUserRole(userId, newRole, expirationDate) {
     } catch (error) {
         console.error('Error updating user role:', error);
         throw error;
+    }
+}
+
+// Function to logout
+async function logoutUser() {
+    try {
+        console.log('Attempting to logout');
+        const { error } = await window.supabase.auth.signOut();
+        
+        if (error) throw error;
+        console.log('Logout successful');
+        
+        showToast('Berhasil keluar dari sistem', 'success');
+        setTimeout(() => {
+            window.location.href = 'login-admin.html';
+        }, 1000);
+    } catch (error) {
+        console.error('Error during logout:', error);
+        showToast('Gagal keluar dari sistem', 'error');
+        setTimeout(() => {
+            window.location.href = 'login-admin.html';
+        }, 1500);
     }
 }
 
@@ -622,51 +680,7 @@ function setupImagePreview(inputElement, previewElement) {
     });
 }
 
-// Function to logout
-async function logoutUser() {
-    try {
-        console.log('Attempting to logout');
-        const { error } = await window.supabase.auth.signOut();
-        
-        // Always clear local storage regardless of signOut result
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminId');
-        
-        if (error) throw error;
-        console.log('Logout successful');
-        
-        showToast('Berhasil keluar dari sistem', 'success');
-        setTimeout(() => {
-            window.location.href = 'login-admin.html';
-        }, 1000);
-    } catch (error) {
-        console.error('Error during logout:', error);
-        showToast('Gagal keluar dari sistem', 'error');
-        setTimeout(() => {
-            window.location.href = 'login-admin.html';
-        }, 1500);
-    }
-}
-
-// Add a debugging function to check VIP expiration in database
-window.debugVipExpiration = async function(userId) {
-    try {
-        const { data, error } = await window.supabase
-            .from('profiles')
-            .select('role, expiration_date')
-            .eq('id', userId)
-            .single();
-            
-        if (error) throw error;
-        
-        console.log('User role in database:', data.role);
-        console.log('Expiration date in database:', data.expiration_date);
-    } catch (err) {
-        console.error('Error checking VIP expiration:', err);
-    }
-};
-
-// Generate a unique UUID for episode ID
+// Function to generate a unique UUID for episode ID
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0;
@@ -680,7 +694,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('Admin.js loaded and DOM ready');
     
     // Check if admin is authenticated
-    if (!checkAdminAuth()) {
+    if (!(await checkAdminAuth())) {
+        console.error('Admin authentication failed');
         return;
     }
     
