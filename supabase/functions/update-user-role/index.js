@@ -3,14 +3,7 @@
 // Securely updates a user's role with admin privileges
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-// CORS headers for browser access
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || ''
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
@@ -38,13 +31,12 @@ serve(async (req) => {
     const requestData = await req.json()
     const { userId, newRole, adminId, expirationDate } = requestData
     
-    console.log('Request data received:', { userId, newRole, adminId, expirationDate })
+    console.log('Request data:', { userId, newRole, adminId, expirationDate })
     
     if (!userId || !newRole || !adminId) {
-      console.error('Missing required fields')
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
-        { headers: corsHeaders, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
     
@@ -56,10 +48,9 @@ serve(async (req) => {
       .single()
       
     if (adminError || !adminData || adminData.role !== 'admin') {
-      console.error('Admin validation failed:', { adminError, adminData })
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Only admins can update user roles' }),
-        { headers: corsHeaders, status: 403 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
       )
     }
     
@@ -68,7 +59,7 @@ serve(async (req) => {
     if (!validRoles.includes(newRole)) {
       return new Response(
         JSON.stringify({ error: 'Invalid role specified' }),
-        { headers: corsHeaders, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
     
@@ -101,7 +92,7 @@ serve(async (req) => {
       console.error('Error updating role:', error)
       return new Response(
         JSON.stringify({ error: `Failed to update role: ${error.message}` }),
-        { headers: corsHeaders, status: 500 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
     
@@ -109,13 +100,13 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ success: true, data }),
-      { headers: corsHeaders, status: 200 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ error: 'Internal Server Error' }),
-      { headers: corsHeaders, status: 500 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
 })

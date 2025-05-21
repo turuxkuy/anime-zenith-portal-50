@@ -6,36 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const adminLoginForm = document.getElementById('adminLoginForm');
   const adminLoginError = document.getElementById('adminLoginError');
   
-  // Function to show toast message
-  function showToast(message, type = 'success') {
-    const toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div class="toast-content">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <span>${message}</span>
-        </div>
-    `;
-
-    toastContainer.appendChild(toast);
-
-    // Show toast
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 100);
-
-    // Hide toast after 3 seconds
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            toast.remove();
-        }, 300);
-    }, 3000);
-  }
-  
   if (adminLoginForm) {
     adminLoginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -97,11 +67,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Admin login successful, redirect to admin panel
-        showToast('Login berhasil! Mengalihkan ke panel admin...', 'success');
-        
-        setTimeout(() => {
-          window.location.href = 'admin.html';
-        }, 1000);
+        console.log('Admin authentication successful, redirecting to admin panel');
+        window.location.href = 'admin.html';
         
       } catch (err) {
         console.error('Unexpected error during login:', err);
