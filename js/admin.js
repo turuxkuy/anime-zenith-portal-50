@@ -616,15 +616,6 @@ window.debugVipExpiration = async function(userId) {
     }
 };
 
-// Generate a unique UUID for episode ID
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
 // Form submission handlers
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin.js loaded and DOM ready');
@@ -765,14 +756,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const episodeId = this.getAttribute('data-id');
 
             try {
-                console.log('Submitting episode form with data:', {
-                    episodeId,
-                    donghuaId,
-                    episodeNumber,
-                    episodeTitle,
-                    releaseDate
-                });
-
                 if (episodeId) {
                     // Update existing episode
                     const { error } = await window.supabase
@@ -790,22 +773,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         })
                         .eq('id', episodeId);
 
-                    if (error) {
-                        console.error('Update episode error:', error);
-                        throw error;
-                    }
+                    if (error) throw error;
 
                     showToast('Episode berhasil diperbarui', 'success');
                 } else {
-                    // Generate a UUID for the new episode
-                    const newEpisodeId = generateUUID();
-                    console.log('Generated new episode ID:', newEpisodeId);
-                    
-                    // Add new episode with explicit ID
+                    // Add new episode
                     const { error } = await window.supabase
                         .from('episodes')
                         .insert({
-                            id: newEpisodeId,
                             donghua_id: donghuaId,
                             episode_number: episodeNumber,
                             title: episodeTitle,
@@ -817,10 +792,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             release_date: releaseDate
                         });
 
-                    if (error) {
-                        console.error('Insert episode error:', error);
-                        throw error;
-                    }
+                    if (error) throw error;
 
                     showToast('Episode berhasil ditambahkan', 'success');
                 }
@@ -986,4 +958,3 @@ function getCookie(name) {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
-
