@@ -6,6 +6,36 @@ document.addEventListener('DOMContentLoaded', function() {
   const adminLoginForm = document.getElementById('adminLoginForm');
   const adminLoginError = document.getElementById('adminLoginError');
   
+  // Function to show toast message
+  function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Show toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+
+    // Hide toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+  }
+  
   if (adminLoginForm) {
     adminLoginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -66,9 +96,18 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         
+        // Admin login successful, save token to localStorage
+        localStorage.setItem('adminToken', data.session.access_token);
+        localStorage.setItem('adminId', data.user.id);
+        
+        // Show success message
+        showToast('Login berhasil! Mengalihkan ke panel admin...', 'success');
+        
         // Admin login successful, redirect to admin panel
         console.log('Admin authentication successful, redirecting to admin panel');
-        window.location.href = 'admin.html';
+        setTimeout(() => {
+          window.location.href = 'admin.html';
+        }, 1000);
         
       } catch (err) {
         console.error('Unexpected error during login:', err);
