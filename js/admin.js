@@ -1,3 +1,4 @@
+
 // Admin panel JavaScript
 
 // Function to show toast message
@@ -85,35 +86,15 @@ async function loadDonghua() {
                 <td>${item.genre}</td>
                 <td>${item.status}</td>
                 <td>
-                    <button class="action-btn edit-btn" data-id="${item.id}">
+                    <button class="action-btn edit-btn" data-id="${item.id}" onclick="openDonghuaEditModal('${item.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="action-btn delete-btn" data-id="${item.id}">
+                    <button class="action-btn delete-btn" data-id="${item.id}" onclick="confirmDeleteDonghua('${item.id}')">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             `;
             tableBody.appendChild(row);
-        });
-
-        // Add event listeners to edit and delete buttons
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const donghuaId = this.getAttribute('data-id');
-                const donghuaItem = donghua.find(d => d.id === donghuaId);
-                if (donghuaItem) {
-                    openDonghuaEditModal(donghuaItem);
-                }
-            });
-        });
-
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', async function() {
-                const donghuaId = this.getAttribute('data-id');
-                if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
-                    await deleteDonghua(donghuaId);
-                }
-            });
         });
 
         document.getElementById('totalDonghua').textContent = donghua.length;
@@ -124,25 +105,75 @@ async function loadDonghua() {
     }
 }
 
+// Function to confirm delete donghua
+function confirmDeleteDonghua(donghuaId) {
+    if (confirm('Apakah Anda yakin ingin menghapus donghua ini?')) {
+        deleteDonghua(donghuaId);
+    }
+}
+
 // Function to open donghua edit modal
-function openDonghuaEditModal(donghuaItem) {
-    const modal = document.getElementById('donghuaModal');
-    const form = document.getElementById('donghuaForm');
+async function openDonghuaEditModal(donghuaId) {
+    try {
+        console.log('Opening edit modal for donghua ID:', donghuaId);
+        
+        // Fetch the donghua details
+        const { data: donghuaItem, error } = await window.supabase
+            .from('donghua')
+            .select('*')
+            .eq('id', donghuaId)
+            .single();
 
-    if (!modal || !form) return;
+        if (error) throw error;
+        
+        if (!donghuaItem) {
+            showToast('Donghua tidak ditemukan', 'error');
+            return;
+        }
 
-    document.getElementById('donghuaModalTitle').textContent = 'Edit Donghua';
-    document.getElementById('title').value = donghuaItem.title || '';
-    document.getElementById('year').value = donghuaItem.year || '';
-    document.getElementById('genre').value = donghuaItem.genre || '';
-    document.getElementById('status').value = donghuaItem.status || 'Ongoing';
-    document.getElementById('rating').value = donghuaItem.rating || '';
-    document.getElementById('synopsis').value = donghuaItem.synopsis || '';
-    document.getElementById('posterUrl').value = donghuaItem.poster_url || '';
-    document.getElementById('backdropUrl').value = donghuaItem.backdrop_url || '';
-    form.setAttribute('data-id', donghuaItem.id);
+        const modal = document.getElementById('donghuaModal');
+        const form = document.getElementById('donghuaForm');
 
-    openModal(modal);
+        if (!modal || !form) {
+            console.error('Modal or form element not found');
+            return;
+        }
+
+        document.getElementById('donghuaModalTitle').textContent = 'Edit Donghua';
+        document.getElementById('title').value = donghuaItem.title || '';
+        document.getElementById('year').value = donghuaItem.year || '';
+        document.getElementById('genre').value = donghuaItem.genre || '';
+        document.getElementById('status').value = donghuaItem.status || 'Ongoing';
+        document.getElementById('rating').value = donghuaItem.rating || '';
+        document.getElementById('synopsis').value = donghuaItem.synopsis || '';
+        document.getElementById('posterUrl').value = donghuaItem.poster_url || '';
+        document.getElementById('backdropUrl').value = donghuaItem.backdrop_url || '';
+        form.setAttribute('data-id', donghuaItem.id);
+
+        // Setup image previews
+        if (donghuaItem.poster_url) {
+            const posterPreview = document.getElementById('posterPreview');
+            posterPreview.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = donghuaItem.poster_url;
+            img.style.maxWidth = '100%';
+            posterPreview.appendChild(img);
+        }
+
+        if (donghuaItem.backdrop_url) {
+            const backdropPreview = document.getElementById('backdropPreview');
+            backdropPreview.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = donghuaItem.backdrop_url;
+            img.style.maxWidth = '100%';
+            backdropPreview.appendChild(img);
+        }
+
+        openModal('donghuaModal');
+    } catch (error) {
+        console.error('Error opening donghua edit modal:', error);
+        showToast('Gagal membuka modal edit', 'error');
+    }
 }
 
 // Function to delete donghua
@@ -188,35 +219,15 @@ async function loadEpisodes() {
                 <td>${episode.title}</td>
                 <td>${episode.is_vip ? 'VIP' : 'Umum'}</td>
                 <td>
-                    <button class="action-btn edit-btn" data-id="${episode.id}">
+                    <button class="action-btn edit-btn" data-id="${episode.id}" onclick="openEpisodeEditModal('${episode.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="action-btn delete-btn" data-id="${episode.id}">
+                    <button class="action-btn delete-btn" data-id="${episode.id}" onclick="confirmDeleteEpisode('${episode.id}')">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             `;
             tableBody.appendChild(row);
-        });
-
-        // Add event listeners to edit and delete buttons
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const episodeId = this.getAttribute('data-id');
-                const episodeItem = episodes.find(e => e.id === episodeId);
-                if (episodeItem) {
-                    openEpisodeEditModal(episodeItem);
-                }
-            });
-        });
-
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', async function() {
-                const episodeId = this.getAttribute('data-id');
-                if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
-                    await deleteEpisode(episodeId);
-                }
-            });
         });
 
         document.getElementById('totalEpisodes').textContent = episodes.length;
@@ -227,28 +238,69 @@ async function loadEpisodes() {
     }
 }
 
+// Function to confirm delete episode
+function confirmDeleteEpisode(episodeId) {
+    if (confirm('Apakah Anda yakin ingin menghapus episode ini?')) {
+        deleteEpisode(episodeId);
+    }
+}
+
 // Function to open episode edit modal
-async function openEpisodeEditModal(episodeItem) {
-    const modal = document.getElementById('episodeModal');
-    const form = document.getElementById('episodeForm');
+async function openEpisodeEditModal(episodeId) {
+    try {
+        console.log('Opening edit modal for episode ID:', episodeId);
+        
+        // Fetch the episode details
+        const { data: episodeItem, error } = await window.supabase
+            .from('episodes')
+            .select('*')
+            .eq('id', episodeId)
+            .single();
 
-    if (!modal || !form) return;
+        if (error) throw error;
+        
+        if (!episodeItem) {
+            showToast('Episode tidak ditemukan', 'error');
+            return;
+        }
 
-    document.getElementById('episodeModalTitle').textContent = 'Edit Episode';
-    document.getElementById('episodeNumber').value = episodeItem.episode_number || '';
-    document.getElementById('episodeTitle').value = episodeItem.title || '';
-    document.getElementById('episodeDescription').value = episodeItem.description || '';
-    document.getElementById('episodeDuration').value = episodeItem.duration || '';
-    document.getElementById('isVip').value = episodeItem.is_vip ? 'true' : 'false';
-    document.getElementById('thumbnailUrl').value = episodeItem.thumbnail_url || '';
-    document.getElementById('videoUrl').value = episodeItem.video_url || '';
-    document.getElementById('releaseDate').value = episodeItem.release_date ? episodeItem.release_date.substring(0, 10) : '';
-    form.setAttribute('data-id', episodeItem.id);
+        const modal = document.getElementById('episodeModal');
+        const form = document.getElementById('episodeForm');
 
-    // Load donghua options
-    await loadDonghuaOptions(episodeItem.donghua_id);
+        if (!modal || !form) {
+            console.error('Modal or form element not found');
+            return;
+        }
 
-    openModal(modal);
+        document.getElementById('episodeModalTitle').textContent = 'Edit Episode';
+        document.getElementById('episodeNumber').value = episodeItem.episode_number || '';
+        document.getElementById('episodeTitle').value = episodeItem.title || '';
+        document.getElementById('episodeDescription').value = episodeItem.description || '';
+        document.getElementById('episodeDuration').value = episodeItem.duration || '';
+        document.getElementById('isVip').value = episodeItem.is_vip ? 'true' : 'false';
+        document.getElementById('thumbnailUrl').value = episodeItem.thumbnail_url || '';
+        document.getElementById('videoUrl').value = episodeItem.video_url || '';
+        document.getElementById('releaseDate').value = episodeItem.release_date ? episodeItem.release_date.substring(0, 10) : '';
+        form.setAttribute('data-id', episodeItem.id);
+
+        // Setup thumbnail preview
+        if (episodeItem.thumbnail_url) {
+            const thumbnailPreview = document.getElementById('thumbnailPreview');
+            thumbnailPreview.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = episodeItem.thumbnail_url;
+            img.style.maxWidth = '100%';
+            thumbnailPreview.appendChild(img);
+        }
+
+        // Load donghua options
+        await loadDonghuaOptions(episodeItem.donghua_id);
+
+        openModal('episodeModal');
+    } catch (error) {
+        console.error('Error opening episode edit modal:', error);
+        showToast('Gagal membuka modal edit', 'error');
+    }
 }
 
 // Function to delete episode
@@ -337,24 +389,13 @@ async function loadUsers() {
                 <td>${expirationText}</td>
                 <td>${new Date(user.created_at).toLocaleDateString('id-ID')}</td>
                 <td>
-                    <button class="action-btn edit-btn" data-id="${user.id}">
+                    <button class="action-btn edit-btn" data-id="${user.id}" onclick="openUserEditModal('${user.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
                 </td>
             `;
             
             tableBody.appendChild(row);
-        });
-        
-        // Add event listeners to edit buttons
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = this.getAttribute('data-id');
-                const user = users.find(u => u.id === userId);
-                if (user) {
-                    openUserEditModal(user);
-                }
-            });
         });
         
         document.getElementById('totalUsers').textContent = users.length;
@@ -367,51 +408,79 @@ async function loadUsers() {
 }
 
 // Function to open user edit modal
-function openUserEditModal(user) {
-    const modal = document.getElementById('userModal');
-    const form = document.getElementById('userForm');
-    const expirationDateGroup = document.getElementById('expirationDateGroup');
-    
-    if (!modal || !form) return;
-    
-    document.getElementById('userId').value = user.id;
-    document.getElementById('username').value = user.username || '';
-    document.getElementById('email').value = user.email || '';
-    document.getElementById('userRole').value = user.role || 'user';
-    
-    // Format the expiration date for the datetime-local input
-    const expirationInput = document.getElementById('expirationDate');
-    if (expirationInput) {
-        if (user.expiration_date) {
-            // Format the date to YYYY-MM-DDTHH:MM format required by datetime-local input
-            const expDate = new Date(user.expiration_date);
-            const year = expDate.getFullYear();
-            const month = String(expDate.getMonth() + 1).padStart(2, '0');
-            const day = String(expDate.getDate()).padStart(2, '0');
-            const hours = String(expDate.getHours()).padStart(2, '0');
-            const minutes = String(expDate.getMinutes()).padStart(2, '0');
-            expirationInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
-        } else {
-            expirationInput.value = '';
+async function openUserEditModal(userId) {
+    try {
+        console.log('Opening edit modal for user ID:', userId);
+        
+        // Fetch the user details
+        const { data: userItem, error } = await window.supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error) throw error;
+        
+        if (!userItem) {
+            showToast('Pengguna tidak ditemukan', 'error');
+            return;
         }
-    }
-    
-    // Show/hide expiration date field based on role
-    if (expirationDateGroup) {
-        expirationDateGroup.style.display = user.role === 'vip' ? 'block' : 'none';
-    }
-    
-    // Add event listener for role change to show/hide expiration date field
-    const roleSelect = document.getElementById('userRole');
-    if (roleSelect) {
-        roleSelect.addEventListener('change', function() {
-            if (expirationDateGroup) {
-                expirationDateGroup.style.display = this.value === 'vip' ? 'block' : 'none';
+
+        const modal = document.getElementById('userModal');
+        const form = document.getElementById('userForm');
+        const expirationDateGroup = document.getElementById('expirationDateGroup');
+        
+        if (!modal || !form) {
+            console.error('Modal or form element not found');
+            return;
+        }
+        
+        document.getElementById('userId').value = userItem.id;
+        document.getElementById('username').value = userItem.username || '';
+        document.getElementById('email').value = userItem.email || '';
+        document.getElementById('userRole').value = userItem.role || 'user';
+        
+        // Format the expiration date for the datetime-local input
+        const expirationInput = document.getElementById('expirationDate');
+        if (expirationInput) {
+            if (userItem.expiration_date) {
+                // Format the date to YYYY-MM-DDTHH:MM format required by datetime-local input
+                const expDate = new Date(userItem.expiration_date);
+                const year = expDate.getFullYear();
+                const month = String(expDate.getMonth() + 1).padStart(2, '0');
+                const day = String(expDate.getDate()).padStart(2, '0');
+                const hours = String(expDate.getHours()).padStart(2, '0');
+                const minutes = String(expDate.getMinutes()).padStart(2, '0');
+                expirationInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            } else {
+                expirationInput.value = '';
             }
-        });
+        }
+        
+        // Show/hide expiration date field based on role
+        if (expirationDateGroup) {
+            expirationDateGroup.style.display = userItem.role === 'vip' ? 'block' : 'none';
+        }
+        
+        // Add event listener for role change to show/hide expiration date field
+        const roleSelect = document.getElementById('userRole');
+        if (roleSelect) {
+            // Remove any existing event listeners
+            const newRoleSelect = roleSelect.cloneNode(true);
+            roleSelect.parentNode.replaceChild(newRoleSelect, roleSelect);
+            
+            newRoleSelect.addEventListener('change', function() {
+                if (expirationDateGroup) {
+                    expirationDateGroup.style.display = this.value === 'vip' ? 'block' : 'none';
+                }
+            });
+        }
+        
+        openModal('userModal');
+    } catch (error) {
+        console.error('Error opening user edit modal:', error);
+        showToast('Gagal membuka modal edit', 'error');
     }
-    
-    openModal('userModal');
 }
 
 // Function to update user role
@@ -501,6 +570,8 @@ async function checkExpiredVipStatus() {
 
 // Function to handle image preview
 function setupImagePreview(inputElement, previewElement) {
+    if (!inputElement || !previewElement) return;
+    
     inputElement.addEventListener('input', function() {
         previewElement.innerHTML = '';
         const imageUrl = this.value;
@@ -511,6 +582,20 @@ function setupImagePreview(inputElement, previewElement) {
             previewElement.appendChild(img);
         }
     });
+}
+
+// Function to logout
+async function logoutUser() {
+    try {
+        console.log('Attempting to logout');
+        const { error } = await window.supabase.auth.signOut();
+        if (error) throw error;
+        console.log('Logout successful');
+        window.location.href = 'login-admin.html';
+    } catch (error) {
+        console.error('Error during logout:', error);
+        showToast('Gagal keluar dari sistem', 'error');
+    }
 }
 
 // Add a debugging function to check VIP expiration in database
@@ -533,6 +618,8 @@ window.debugVipExpiration = async function(userId) {
 
 // Form submission handlers
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin.js loaded and DOM ready');
+    
     // Sidebar toggle
     const menuToggle = document.getElementById('menuToggle');
     const adminSidebar = document.getElementById('adminSidebar');
@@ -553,21 +640,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async function() {
-            try {
-                const { error } = await window.supabase.auth.signOut();
-                if (error) throw error;
-                window.location.href = 'login.html';
-            } catch (error) {
-                console.error('Error logging out:', error);
-                showToast('Gagal keluar', 'error');
-            }
+        console.log('Logout button found, adding event listener');
+        logoutBtn.addEventListener('click', function() {
+            console.log('Logout button clicked');
+            logoutUser();
         });
+    } else {
+        console.warn('Logout button not found');
     }
 
     // Menu item click
     document.querySelectorAll('.admin-menu-item').forEach(item => {
         item.addEventListener('click', function() {
+            // Skip if this is the logout button
+            if (this.id === 'logoutBtn') return;
+            
             // Remove active class from all menu items and pages
             document.querySelectorAll('.admin-menu-item').forEach(i => i.classList.remove('active'));
             document.querySelectorAll('.admin-page').forEach(page => page.classList.remove('active'));
@@ -774,6 +861,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('donghuaModalTitle').textContent = 'Tambah Donghua';
             document.getElementById('donghuaForm').reset();
             document.getElementById('donghuaForm').removeAttribute('data-id');
+            // Clear image previews
+            document.getElementById('posterPreview').innerHTML = '';
+            document.getElementById('backdropPreview').innerHTML = '';
             openModal('donghuaModal');
         });
     }
@@ -785,6 +875,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('episodeModalTitle').textContent = 'Tambah Episode';
             document.getElementById('episodeForm').reset();
             document.getElementById('episodeForm').removeAttribute('data-id');
+            // Clear image previews
+            document.getElementById('thumbnailPreview').innerHTML = '';
             await loadDonghuaOptions();
             openModal('episodeModal');
         });
@@ -795,7 +887,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (syncDonghuaBtn) {
         syncDonghuaBtn.addEventListener('click', async function() {
             showToast('Sinkronisasi donghua dimulai...', 'info');
-            // Implement sync logic here
+            await loadDonghua();
             showToast('Sinkronisasi donghua selesai', 'success');
         });
     }
@@ -805,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (syncEpisodeBtn) {
         syncEpisodeBtn.addEventListener('click', async function() {
             showToast('Sinkronisasi episode dimulai...', 'info');
-            // Implement sync logic here
+            await loadEpisodes();
             showToast('Sinkronisasi episode selesai', 'success');
         });
     }
@@ -845,20 +937,19 @@ document.addEventListener('DOMContentLoaded', function() {
     setupImagePreview(document.getElementById('backdropUrl'), document.getElementById('backdropPreview'));
     setupImagePreview(document.getElementById('thumbnailUrl'), document.getElementById('thumbnailPreview'));
 
-    // Load initial data
-    const currentPath = window.location.pathname;
-    const page = currentPath.split('/').pop().replace('.html', '');
+    // Expose functions to global scope
+    window.openDonghuaEditModal = openDonghuaEditModal;
+    window.confirmDeleteDonghua = confirmDeleteDonghua;
+    window.openEpisodeEditModal = openEpisodeEditModal;
+    window.confirmDeleteEpisode = confirmDeleteEpisode;
+    window.openUserEditModal = openUserEditModal;
+    window.logoutUser = logoutUser;
 
-    switch (page) {
-        case 'admin':
-            // Load dashboard stats
-            loadDonghua();
-            loadEpisodes();
-            loadUsers();
-            break;
-        default:
-            break;
-    }
+    // Load initial data
+    console.log('Loading initial data');
+    loadDonghua();
+    loadEpisodes();
+    loadUsers();
 });
 
 // Utility functions
