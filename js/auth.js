@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Auth.js loaded");
   
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
         registerButton.disabled = true;
         
         // Use the create-user Edge Function instead of direct signUp
-        const { data, error } = await supabase.functions.invoke('create-user', {
+        const response = await supabase.functions.invoke('create-user', {
           body: {
             email: email,
             password: password,
@@ -133,15 +134,15 @@ document.addEventListener('DOMContentLoaded', function() {
         registerButton.textContent = originalText;
         registerButton.disabled = false;
         
-        console.log('Edge function response:', data, error);
+        console.log('Edge function response:', response);
         
-        if (error) {
-          console.error('Registration error from Edge Function:', error);
-          throw new Error('Gagal membuat pengguna: ' + (error.message || ''));
+        if (response.error) {
+          console.error('Registration error from Edge Function:', response.error);
+          throw new Error(response.error || 'Gagal membuat pengguna');
         }
         
-        if (data && data.user) {
-          console.log('User created successfully through Edge Function:', data.user);
+        if (response.data && response.data.user) {
+          console.log('User created successfully through Edge Function:', response.data.user);
           
           // Show success message and switch to login tab
           errorElement.textContent = 'Pendaftaran berhasil! Silakan masuk.';
