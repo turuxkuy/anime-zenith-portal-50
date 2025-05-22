@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Auth.js loaded");
   
@@ -98,6 +97,12 @@ document.addEventListener('DOMContentLoaded', function() {
       const confirmPassword = document.getElementById('confirmPassword').value;
       const errorElement = document.getElementById('registerError');
       
+      // Clear previous errors
+      if (errorElement) {
+        errorElement.textContent = '';
+        errorElement.style.display = 'none';
+      }
+      
       // Validate password match
       if (password !== confirmPassword) {
         errorElement.textContent = 'Password tidak cocok';
@@ -108,6 +113,12 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         console.log('Calling create-user Edge Function to create user with email:', email, 'and username:', username);
         
+        // Show loading indicator
+        const registerButton = registerForm.querySelector('button[type="submit"]');
+        const originalText = registerButton.textContent;
+        registerButton.textContent = 'Memproses...';
+        registerButton.disabled = true;
+        
         // Use the create-user Edge Function instead of direct signUp
         const { data, error } = await supabase.functions.invoke('create-user', {
           body: {
@@ -117,6 +128,10 @@ document.addEventListener('DOMContentLoaded', function() {
             role: 'user'
           }
         });
+        
+        // Restore button state
+        registerButton.textContent = originalText;
+        registerButton.disabled = false;
         
         console.log('Edge function response:', data, error);
         
@@ -147,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Registration error:', error);
         errorElement.textContent = 'Pendaftaran gagal: ' + (error.message || 'Terjadi kesalahan');
         errorElement.style.display = 'block';
+        errorElement.style.color = '#FF5252';
       }
     });
   }
