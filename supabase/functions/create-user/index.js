@@ -38,7 +38,7 @@ serve(async (req) => {
       throw new Error('Email, password, and username are required');
     }
     
-    // Check if user already exists
+    // Check if user already exists - now using the id column
     const { data: existingUsers, error: checkError } = await supabase
       .from('profiles')
       .select('email')
@@ -71,26 +71,26 @@ serve(async (req) => {
 
     console.log("User created successfully:", userData?.user?.id);
 
-    // Create the user's profile in profiles table
+    // Create the user's profile in profiles table - now using the id column
     if (userData?.user) {
       console.log("Creating profile for user ID:", userData.user.id);
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: userData.user.id,
-        username,
-        email,
-        role
-      });
       
-      if (profileError) {
-        console.error("Error creating profile:", profileError);
+      // Note: We don't need to manually insert the profile anymore since the trigger will do it
+      // But we update it to add the role if it's different from the default
+      if (role !== 'user') {
+        const { error: profileError } = await supabase.from('profiles').update({
+          role
+        }).eq('id', userData.user.id);
         
-        // If profile creation fails, try to delete the auth user to keep things consistent
-        await supabase.auth.admin.deleteUser(userData.user.id);
+        if (profileError) {
+          console.error("Error updating profile role:", profileError);
+          // If profile update fails, try to delete the auth user to keep things consistent
+          await supabase.auth.admin.deleteUser(userData.user.id);
+          throw profileError;
+        }
         
-        throw profileError;
+        console.log("Profile role updated successfully");
       }
-      
-      console.log("Profile created successfully");
     } else {
       throw new Error('User data is incomplete');
     }
